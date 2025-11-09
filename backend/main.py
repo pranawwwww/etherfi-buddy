@@ -944,3 +944,112 @@ Format your response as JSON:
             "error": "Forecast generation failed",
             "message": str(e)
         }
+
+
+# AI-powered risk metric explanations
+class RiskMetricExplainRequest(BaseModel):
+    metric_name: str
+    metric_value: float
+    additional_context: Optional[Dict[str, Any]] = None
+
+
+@app.post("/api/explain-risk-metric")
+async def explain_risk_metric(request: RiskMetricExplainRequest):
+    """
+    Generate AI-powered explanations for risk metrics based on actual values
+    """
+    try:
+        # Check if Anthropic API key is available
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            # Return static explanations if no AI available
+            return {
+                "metric": request.metric_name,
+                "explanation": get_static_explanation(request.metric_name, request.metric_value),
+                "ai_powered": False
+            }
+
+        # Use Claude for personalized analysis
+        from anthropic import Anthropic
+        client = Anthropic(api_key=api_key)
+
+        # Build context-aware prompt
+        context_str = ""
+        if request.additional_context:
+            context_str = f"\n\nAdditional context: {json.dumps(request.additional_context, indent=2)}"
+
+        prompt = f"""You are a DeFi risk analyst explaining metrics to a layman investor.
+
+Metric: {request.metric_name}
+Current Value: {request.metric_value}{context_str}
+
+Provide a concise, personalized explanation (2-3 sentences) that:
+1. Explains what this specific value means for THIS user
+2. Whether this is good, concerning, or neutral
+3. One actionable insight if relevant
+
+Use simple language, avoid jargon. Be direct and specific to the actual value shown.
+
+Response format (plain text, no JSON):"""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=200,
+            temperature=0.7,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        explanation = response.content[0].text.strip()
+
+        return {
+            "metric": request.metric_name,
+            "value": request.metric_value,
+            "explanation": explanation,
+            "ai_powered": True
+        }
+
+    except Exception as e:
+        print(f"Error generating AI explanation: {e}")
+        return {
+            "metric": request.metric_name,
+            "explanation": get_static_explanation(request.metric_name, request.metric_value),
+            "ai_powered": False,
+            "error": str(e)
+        }
+
+
+def get_static_explanation(metric_name: str, value: float) -> str:
+    """Fallback static explanations"""
+    explanations = {
+        "risk_score": f"Your overall risk score is {value}/100. " + 
+            ("This is excellent - your portfolio is well-protected." if value < 30 else
+             "This is moderate - some areas could be improved." if value < 60 else
+             "This is concerning - consider reducing exposure to high-risk assets."),
+        
+        "slashing_probability": f"There's a {value}% chance of slashing penalties. " +
+            ("Very low risk - your validators are performing excellently." if value < 2 else
+             "Moderate risk - monitor validator performance." if value < 5 else
+             "Higher risk - review validator setup and consider diversification."),
+        
+        "avs_concentration": f"{value}% of your stake is in the largest AVS. " +
+            ("Good diversification across services." if value < 40 else
+             "Moderate concentration - consider spreading across more AVS." if value < 70 else
+             "High concentration risk - diversify to reduce dependency."),
+        
+        "operator_uptime": f"Your validators are {value}% online over 7 days. " +
+            ("Excellent uptime - maximizing rewards." if value > 99.5 else
+             "Good uptime but room for improvement." if value > 98 else
+             "Concerning uptime - investigate validator issues."),
+        
+        "liquidity_depth": f"Liquidity health index: {value}/100. " +
+            ("Excellent - you can exit positions easily." if value > 70 else
+             "Moderate - some slippage may occur on large trades." if value > 40 else
+             "Limited liquidity - exiting large positions may impact prices."),
+        
+        "restake_distribution": f"{value}% of your assets are restaked. " +
+            ("Conservative approach with lower complexity." if value < 30 else
+             "Balanced restaking for enhanced yields." if value < 70 else
+             "Aggressive restaking - higher rewards but more risk.")
+    }
+    
+    return explanations.get(metric_name, f"Current value: {value}. This metric helps assess your portfolio risk.")
