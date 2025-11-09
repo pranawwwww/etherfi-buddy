@@ -5,6 +5,7 @@ import { useDemoState } from '@/contexts/DemoContext';
 import { EtherFiProductEcosystem } from '@/components/EtherFiProductEcosystem';
 import { MultiAssetChart } from '@/components/MultiAssetChart';
 import { AssetAllocationPieChart } from '@/components/AssetAllocationPieChart';
+import { Explainable } from '@/components/Explainable';
 
 export const PortfolioTab = () => {
   const { demoState } = useDemoState();
@@ -35,22 +36,46 @@ export const PortfolioTab = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total weETH</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total <Explainable term="weETH" type="product">weETH</Explainable>
+            </CardTitle>
             <Wallet className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{balances.weETH.toFixed(4)}</div>
+            <Explainable 
+              term="weETH balance" 
+              type="balance"
+              data={{ amount: balances.weETH, valueUSD: weethValue }}
+            >
+              <div className="text-2xl font-bold text-primary">{balances.weETH.toFixed(4)}</div>
+            </Explainable>
             <p className="text-xs text-muted-foreground">≈ ${weethValue.toFixed(2)}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-card to-card/50 border-accent/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Blended APY</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              <Explainable term="Blended APY" type="metric" data={{ apy: blendedApy, weethValue, liquidUsdValue: balances.LiquidUSD }}>
+                Blended APY
+              </Explainable>
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-accent">{blendedApy.toFixed(2)}%</div>
+            <Explainable 
+              term="Blended APY" 
+              type="metric"
+              data={{ 
+                apy: blendedApy,
+                weethAPY: assumptions.apyStake * 100,
+                liquidUsdAPY: assumptions.apyLiquidUsd * 100,
+                weethValue,
+                liquidUsdValue: balances.LiquidUSD
+              }}
+            >
+              <div className="text-2xl font-bold text-accent">{blendedApy.toFixed(2)}%</div>
+            </Explainable>
             <p className="text-xs text-muted-foreground">Combined portfolio yield</p>
           </CardContent>
         </Card>
@@ -84,19 +109,33 @@ export const PortfolioTab = () => {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-1">
                 <p className="text-sm text-muted-foreground">ETH</p>
-                <p className="text-xl font-bold">{balances.ETH.toFixed(4)}</p>
+                <Explainable term="ETH balance" type="balance" data={{ amount: balances.ETH }}>
+                  <p className="text-xl font-bold">{balances.ETH.toFixed(4)}</p>
+                </Explainable>
               </div>
               <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-1">
-                <p className="text-sm text-muted-foreground">eETH</p>
-                <p className="text-xl font-bold">{balances.eETH.toFixed(4)}</p>
+                <p className="text-sm text-muted-foreground">
+                  <Explainable term="eETH" type="product">eETH</Explainable>
+                </p>
+                <Explainable term="eETH balance" type="balance" data={{ amount: balances.eETH }}>
+                  <p className="text-xl font-bold">{balances.eETH.toFixed(4)}</p>
+                </Explainable>
               </div>
               <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-1">
-                <p className="text-sm text-muted-foreground">weETH</p>
-                <p className="text-xl font-bold">{balances.weETH.toFixed(4)}</p>
+                <p className="text-sm text-muted-foreground">
+                  <Explainable term="weETH" type="product">weETH</Explainable>
+                </p>
+                <Explainable term="weETH balance" type="balance" data={{ amount: balances.weETH, valueUSD: weethValue }}>
+                  <p className="text-xl font-bold">{balances.weETH.toFixed(4)}</p>
+                </Explainable>
               </div>
               <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-1">
-                <p className="text-sm text-muted-foreground">Liquid USD</p>
-                <p className="text-xl font-bold">${balances.LiquidUSD.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">
+                  <Explainable term="LiquidUSD" type="product">Liquid USD</Explainable>
+                </p>
+                <Explainable term="LiquidUSD balance" type="balance" data={{ amount: balances.LiquidUSD }}>
+                  <p className="text-xl font-bold">${balances.LiquidUSD.toFixed(2)}</p>
+                </Explainable>
               </div>
             </div>
           </div>
