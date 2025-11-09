@@ -151,4 +151,34 @@ export const api = {
       metric_value: metricValue,
       additional_context: additionalContext,
     }),
+
+  // Historical price data
+  historicalPrices: (asset: string = 'ETH', days: number = 7) =>
+    getJSON<{
+      asset: string;
+      days: number;
+      data: Array<{ timestamp: number; price: number; date?: string; value?: number }>;
+    }>(`/api/historical-prices?asset=${asset}&days=${days}`),
+
+  // Current gas prices (fallback to 20 gwei if API fails)
+  gasPrice: async (): Promise<{ gasPriceGwei: number; source: string }> => {
+    try {
+      // Try Etherscan API first (returns result in Wei)
+      const response = await fetch('https://api.etherscan.io/api?module=gastracker&action=gasoracle');
+      const data = await response.json();
+      if (data.status === '1' && data.result?.SafeGasPrice) {
+        return {
+          gasPriceGwei: parseFloat(data.result.SafeGasPrice),
+          source: 'etherscan',
+        };
+      }
+    } catch (error) {
+      console.warn('Etherscan gas API failed, using fallback');
+    }
+    // Fallback to 20 gwei
+    return {
+      gasPriceGwei: 20,
+      source: 'fallback',
+    };
+  },
 };

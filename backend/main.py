@@ -87,6 +87,7 @@ class Strategy(BaseModel):
 class SimReq(BaseModel):
     balances: WalletBalances
     assumptions: Assumptions
+    ethPrice: Optional[float] = 3500.0
 
 class SimResp(BaseModel):
     blendedApy: float
@@ -131,8 +132,8 @@ def blended_apy(weeth: float, lusd: float, a: Assumptions) -> float:
     tot = (w + u) or 1.0
     return (w/tot)*a.apyStake + (u/tot)*a.apyLiquidUsd
 
-def risk_badge(weeth: float, lusd: float) -> str:
-    tot = (weeth or 0.0) + eth_eq(lusd or 0.0)
+def risk_badge(weeth: float, lusd: float, eth_price: float = 3500.0) -> str:
+    tot = (weeth or 0.0) + eth_eq(lusd or 0.0, eth_price)
     conc = (weeth / tot) if tot else 0
     return "High" if conc > 0.8 else "Medium" if conc > 0.5 else "Low"
 
@@ -164,8 +165,9 @@ def health():
 @app.post("/api/simulate", response_model=SimResp)
 def simulate(body: SimReq):
     a, b = body.assumptions, body.balances
+    eth_price = body.ethPrice if body.ethPrice else 3500.0
     b_apy = blended_apy(b.weETH, b.LiquidUSD, a)
-    risk = risk_badge(b.weETH, b.LiquidUSD)
+    risk = risk_badge(b.weETH, b.LiquidUSD, eth_price)
     strats = build_strategies(b.weETH, a)
     return SimResp(blendedApy=b_apy, risk=risk, strategies=strats)
 

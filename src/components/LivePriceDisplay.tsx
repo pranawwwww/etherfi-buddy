@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { TrendingUp, TrendingDown, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PriceSparkline } from '@/components/PriceSparkline';
 
 interface PriceData {
   eETH: { price: { price: number; symbol: string; timestamp: number; confidence: number; decimals: number } | number; timestamp: number };
@@ -134,7 +135,7 @@ export function LivePriceDisplay() {
                     maximumFractionDigits: 2,
                   })}
                 </div>
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1 text-sm mb-2">
                   {apy > 0 ? (
                     <>
                       <TrendingUp className="h-3 w-3 text-green-500" />
@@ -148,6 +149,12 @@ export function LivePriceDisplay() {
                       <span className="text-gray-400">No yield</span>
                     </>
                   )}
+                </div>
+
+                {/* 7-day price sparkline */}
+                <div className="mt-2 border-t border-border/50 pt-2">
+                  <div className="text-xs text-muted-foreground mb-1">7-day trend</div>
+                  <PriceSparkline product={product.key} days={7} />
                 </div>
               </div>
             );

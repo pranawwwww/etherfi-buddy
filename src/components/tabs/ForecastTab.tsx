@@ -313,9 +313,10 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         setError(null);
         const response = await api.riskAnalysis(address, validatorIndex);
         setData(response as unknown as RiskData);
+        console.log('[ForecastTab] Risk data loaded:', response);
       } catch (err) {
         console.error("Error fetching risk analysis:", err);
-        setError("Failed to load risk data. Using mock data.");
+        setError("Failed to load risk data from backend. Using demo values.");
         // Keep using mock data on error
       } finally {
         setLoading(false);

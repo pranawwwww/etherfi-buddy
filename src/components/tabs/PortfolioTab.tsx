@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Wallet, TrendingUp, Shield, Lightbulb } from 'lucide-react';
 import { useDemoState } from '@/contexts/DemoContext';
 import { EtherFiProductEcosystem } from '@/components/EtherFiProductEcosystem';
-import { MultiAssetChart } from '@/components/MultiAssetChart';
+import { HistoricalPriceTrends } from '@/components/HistoricalPriceTrends';
 import { AssetAllocationPieChart } from '@/components/AssetAllocationPieChart';
 
 export const PortfolioTab = () => {
@@ -103,8 +103,8 @@ export const PortfolioTab = () => {
         </CardContent>
       </Card>
 
-      {/* Multi-Asset Performance */}
-      <MultiAssetChart />
+      {/* Historical Price Trends */}
+      <HistoricalPriceTrends />
 
       {/* Asset Allocation */}
       <AssetAllocationPieChart />

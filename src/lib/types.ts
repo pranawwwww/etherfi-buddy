@@ -25,6 +25,7 @@ export interface Strategy {
 export interface SimulateRequest {
   balances: WalletBalances;
   assumptions: Assumptions;
+  ethPrice?: number;
 }
 
 export interface SimulateResponse {

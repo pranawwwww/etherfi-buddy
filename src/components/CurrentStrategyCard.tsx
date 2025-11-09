@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDemoState } from '@/contexts/DemoContext';
 import { api } from '@/lib/api';
 import { formatETH, formatUSD, formatPercentage, healthScore, healthBadge } from '@/lib/helpers';
 import type { SimulateResponse } from '@/lib/types';
-import { TrendingUp, AlertTriangle, Shield, Zap } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Shield, Zap, Fuel } from 'lucide-react';
 
 export function CurrentStrategyCard() {
   const { demoState } = useDemoState();
@@ -13,26 +14,55 @@ export function CurrentStrategyCard() {
   const [loading, setLoading] = useState(true);
   const [livePrices, setLivePrices] = useState<any>(null);
   const [liveApy, setLiveApy] = useState<any>(null);
+  const [gasData, setGasData] = useState<{ gasPriceGwei: number; source: string } | null>(null);
 
   useEffect(() => {
-    setLoading(true);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // First fetch prices to get live ETH price
+        const [prices, apy, gas] = await Promise.all([
+          api.prices().catch(() => null),
+          api.apy().catch(() => null),
+          api.gasPrice().catch(() => ({ gasPriceGwei: 20, source: 'fallback' })),
+        ]);
 
-    // Fetch both simulation data and live prices/APY in parallel
-    Promise.all([
-      api.simulate({
-        balances: demoState.balances,
-        assumptions: demoState.assumptions,
-      }),
-      api.prices().catch(() => null),
-      api.apy().catch(() => null),
-    ])
-      .then(([sim, prices, apy]) => {
-        setSimulation(sim);
         setLivePrices(prices);
         setLiveApy(apy);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+        setGasData(gas);
+
+        // Extract live ETH price
+        const getPrice = (priceData: any) => {
+          if (!priceData) return null;
+          if (typeof priceData === 'number') return priceData;
+          if (priceData && typeof priceData === 'object' && 'price' in priceData) {
+            return typeof priceData.price === 'number' ? priceData.price : priceData.price?.price;
+          }
+          return null;
+        };
+        const liveEthPrice = getPrice(prices?.weETH?.price) || getPrice(prices?.eETH?.price) || 3500;
+
+        // Now simulate with live ETH price
+        const sim = await api.simulate({
+          balances: demoState.balances,
+          assumptions: demoState.assumptions,
+          ethPrice: liveEthPrice,
+        });
+
+        setSimulation(sim);
+        console.log('[CurrentStrategyCard] Data loaded:', {
+          user: demoState.balances,
+          liveEthPrice,
+          simulation: sim,
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [demoState]);
 
   if (loading || !simulation) {
@@ -89,6 +119,15 @@ export function CurrentStrategyCard() {
   );
   const healthStatus = healthBadge(health);
 
+  console.log('[CurrentStrategyCard] Health calculation:', {
+    risk: simulation.risk,
+    weETH: demoState.balances.weETH,
+    liquidUSD: demoState.balances.LiquidUSD,
+    ethPrice,
+    healthScore: health,
+    healthStatus,
+  });
+
   // Calculate position breakdown with REAL prices and APY
   const positions = [
     {
@@ -138,18 +177,68 @@ export function CurrentStrategyCard() {
     }
   };
 
-  const getHealthColor = (status: string) => {
-    switch (status) {
-      case 'Good':
-        return 'bg-green-500';
-      case 'Caution':
-        return 'bg-yellow-500';
-      case 'Risky':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+  const getHealthBanner = (score: number, status: string) => {
+    if (score >= 70) {
+      return {
+        bg: 'bg-green-500/10',
+        border: 'border-green-500/30',
+        text: 'text-green-500',
+        emoji: '✅',
+        title: 'Excellent Portfolio Health',
+        description: 'Your portfolio is well-balanced and low-risk. Continue with your current strategy.'
+      };
+    } else if (score >= 50) {
+      return {
+        bg: 'bg-yellow-500/10',
+        border: 'border-yellow-500/30',
+        text: 'text-yellow-500',
+        emoji: '⚠️',
+        title: 'Moderate Portfolio Health',
+        description: 'Your portfolio has some exposure but is manageable. Consider diversifying to reduce risk.'
+      };
+    } else {
+      return {
+        bg: 'bg-red-500/10',
+        border: 'border-red-500/30',
+        text: 'text-red-500',
+        emoji: '🚨',
+        title: 'Portfolio Needs Attention',
+        description: 'High concentration risk detected. Diversify across more assets to improve health.'
+      };
     }
   };
+
+  const healthBanner = getHealthBanner(health, healthStatus);
+
+  // Calculate gas cost to optimize portfolio
+  const calculateGasCost = () => {
+    if (!gasData) return null;
+
+    const gasPriceGwei = gasData.gasPriceGwei;
+
+    // Gas estimates for common operations
+    const GAS_STAKE_ETH_TO_EETH = 50000; // ~50k gas to stake ETH → eETH
+    const GAS_WRAP_EETH_TO_WEETH = 35000; // ~35k gas to wrap eETH → weETH
+
+    // Calculate total gas needed
+    const totalGas = GAS_STAKE_ETH_TO_EETH + GAS_WRAP_EETH_TO_WEETH;
+
+    // Convert to ETH (1 gwei = 10^-9 ETH)
+    const gasCostEth = (totalGas * gasPriceGwei) / 1e9;
+
+    // Convert to USD
+    const gasCostUsd = gasCostEth * ethPrice;
+
+    return {
+      totalGas,
+      gasPriceGwei,
+      gasCostEth,
+      gasCostUsd,
+      source: gasData.source,
+    };
+  };
+
+  const gasCost = calculateGasCost();
 
   return (
     <Card className="border-2 border-primary">
@@ -169,8 +258,33 @@ export function CurrentStrategyCard() {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Portfolio Health Banner - PROMINENT */}
+        <div className={`p-6 rounded-lg border-2 ${healthBanner.bg} ${healthBanner.border}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">{healthBanner.emoji}</div>
+              <div>
+                <div className={`text-2xl font-bold ${healthBanner.text} mb-1`}>
+                  {healthBanner.title}
+                </div>
+                <div className="text-sm text-muted-foreground max-w-2xl">
+                  {healthBanner.description}
+                </div>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className={`text-5xl font-bold ${healthBanner.text}`}>
+                {health}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Health Score
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Summary Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-secondary rounded-lg">
             <div className="text-sm text-muted-foreground">Total Value</div>
             <div className="text-2xl font-bold">{formatUSD(totalUsdValue)}</div>
@@ -193,17 +307,6 @@ export function CurrentStrategyCard() {
             <div className="text-xs text-muted-foreground">
               {formatUSD(annualUsdEarnings)}
             </div>
-          </div>
-
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Health Score</div>
-            <div className="flex items-center justify-center gap-2">
-              <div
-                className={`w-3 h-3 rounded-full ${getHealthColor(healthStatus)}`}
-              />
-              <div className="text-2xl font-bold">{health}/100</div>
-            </div>
-            <div className="text-xs text-muted-foreground">{healthStatus}</div>
           </div>
         </div>
 
@@ -265,7 +368,7 @@ export function CurrentStrategyCard() {
           <div className="p-4 bg-secondary border-l-4 border-l-orange-500 rounded-lg">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-              <div>
+              <div className="flex-1">
                 <div className="font-semibold text-foreground mb-2">
                   Optimization Opportunities
                 </div>
@@ -287,6 +390,38 @@ export function CurrentStrategyCard() {
                     </li>
                   )}
                 </ul>
+
+                {/* Gas Cost Estimator Badge */}
+                {gasCost && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg cursor-help">
+                            <Fuel className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                              ⛽ Gas to optimize: ~{formatUSD(gasCost.gasCostUsd)} at current prices
+                            </span>
+                            {gasCost.source === 'etherscan' && (
+                              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                                Live
+                              </Badge>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="text-sm">
+                            We'll help you find the best time to optimize based on gas prices.
+                            Current gas: {gasCost.gasPriceGwei.toFixed(1)} gwei.
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Estimated cost: Stake ETH→eETH (50k gas) + Wrap eETH→weETH (35k gas) = 85k gas total
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
               </div>
             </div>
           </div>

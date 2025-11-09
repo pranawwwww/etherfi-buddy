@@ -61,8 +61,8 @@ export const USER_PROFILES: Record<string, UserProfile> = {
     balances: {
       ETH: 0.3,        // Small liquid reserve
       eETH: 2.0,       // Significant staking position
-      weETH: 8.5,      // Primary position for borrowing
-      LiquidUSD: 5200, // Healthy stablecoin allocation
+      weETH: 5.5,      // Primary position for borrowing (reduced for better balance)
+      LiquidUSD: 12000, // Healthy stablecoin allocation (increased for better diversification)
     },
     assumptions: {
       apyStake: 0.04,
@@ -73,7 +73,7 @@ export const USER_PROFILES: Record<string, UserProfile> = {
     problems: [
       '✅ Already well-optimized',
       '🔍 Could explore other chains (Arbitrum, Base)',
-      '📈 Slight over-exposure to ETH derivatives (77%)',
+      '📈 Good ETH/Stable balance (38% stables)',
       '🎲 Could add BTC for more diversification',
     ],
     opportunities: [

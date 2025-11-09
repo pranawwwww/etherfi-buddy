@@ -4,7 +4,8 @@
       "Bash(curl.exe:*)",
       "Bash(findstr:*)",
       "Bash(del temp_openapi.json)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

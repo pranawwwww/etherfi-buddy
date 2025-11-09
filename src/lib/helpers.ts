@@ -13,12 +13,22 @@ export function healthScore(
   if (risk === "Medium") score -= 15;
   if (risk === "High") score -= 30;
 
-  // Concentration penalty
+  // Concentration penalty - measures balance between ETH derivatives and stables
   const totalValue = ethPrice * (weETH || 0) + (lusd || 0);
   const usdSide = totalValue ? (lusd || 0) / totalValue : 0;
 
-  if (usdSide > 0.8 || usdSide < 0.2) {
-    score -= 15; // Too concentrated in one asset
+  // Penalize poor diversification (too much on either side)
+  if (usdSide > 0.8) {
+    score -= 20; // Too much stables
+  } else if (usdSide < 0.15) {
+    score -= 20; // Too little stables (high liquidation risk)
+  } else if (usdSide >= 0.3 && usdSide <= 0.7) {
+    score += 10; // Reward balanced allocation
+  }
+
+  // Reward active yield-earning positions
+  if (weETH > 0 && lusd > 0) {
+    score += 5; // Both positions are productive
   }
 
   return Math.max(0, Math.min(100, score));
