@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useDemoState } from '@/contexts/DemoContext';
 import { api } from '@/lib/api';
 import { formatPercentage, formatETH, formatUSD } from '@/lib/helpers';
 import type { SimulateResponse } from '@/lib/types';
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Minus, ExternalLink } from 'lucide-react';
+import { StrategyExecutionModal } from '@/components/StrategyExecutionModal';
 
 export function StrategyComparisonTable() {
   const { demoState } = useDemoState();
   const [simulation, setSimulation] = useState<SimulateResponse | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -167,6 +171,10 @@ export function StrategyComparisonTable() {
               title="Conservative Strategy"
               strategy={conservative}
               isCurrent={false}
+              onViewDetails={() => {
+                setSelectedStrategy(conservative);
+                setModalOpen(true);
+              }}
             />
           )}
           {active && (
@@ -174,10 +182,20 @@ export function StrategyComparisonTable() {
               title="Active Strategy"
               strategy={active}
               isCurrent={false}
+              onViewDetails={() => {
+                setSelectedStrategy(active);
+                setModalOpen(true);
+              }}
             />
           )}
         </div>
       </CardContent>
+
+      <StrategyExecutionModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        strategy={selectedStrategy}
+      />
     </Card>
   );
 }
@@ -258,8 +276,8 @@ function ComparisonInsight({
     <div
       className={`p-4 rounded-lg border ${
         isPositive
-          ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
-          : 'bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800'
+          ? 'bg-green-950/40 border-green-500/20'
+          : 'bg-orange-950/40 border-orange-500/20'
       }`}
     >
       <div className="text-sm font-semibold mb-2">{title}</div>
@@ -288,13 +306,15 @@ function StrategyDetailCard({
   title,
   strategy,
   isCurrent,
+  onViewDetails,
 }: {
   title: string;
   strategy: any;
   isCurrent: boolean;
+  onViewDetails: () => void;
 }) {
   return (
-    <div className="p-4 border rounded-lg">
+    <div className="p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer bg-card">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold">{title}</h4>
         {isCurrent && (
@@ -313,25 +333,45 @@ function StrategyDetailCard({
         <div>
           <span className="text-muted-foreground">Steps:</span>
           <ul className="mt-1 space-y-1 ml-4">
-            {strategy.steps.map((step: string, idx: number) => (
+            {strategy.steps.slice(0, 2).map((step: string, idx: number) => (
               <li key={idx} className="flex items-start gap-2">
                 <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                <span>{step}</span>
+                <span className="line-clamp-1">{step}</span>
               </li>
             ))}
+            {strategy.steps.length > 2 && (
+              <li className="text-muted-foreground text-xs ml-6">
+                +{strategy.steps.length - 2} more steps...
+              </li>
+            )}
           </ul>
         </div>
         <div>
           <span className="text-muted-foreground">Risks:</span>
           <ul className="mt-1 space-y-1 ml-4">
-            {strategy.risks.map((risk: string, idx: number) => (
+            {strategy.risks.slice(0, 2).map((risk: string, idx: number) => (
               <li key={idx} className="text-orange-600 text-xs">
                 • {risk}
               </li>
             ))}
+            {strategy.risks.length > 2 && (
+              <li className="text-muted-foreground text-xs">
+                +{strategy.risks.length - 2} more risks...
+              </li>
+            )}
           </ul>
         </div>
       </div>
+
+      <Button
+        className="w-full mt-4"
+        variant="outline"
+        size="sm"
+        onClick={onViewDetails}
+      >
+        <ExternalLink className="w-4 h-4 mr-2" />
+        View Execution Guide
+      </Button>
     </div>
   );
 }

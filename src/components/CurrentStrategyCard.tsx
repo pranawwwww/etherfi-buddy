@@ -90,13 +90,13 @@ export function CurrentStrategyCard() {
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'Low':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
       case 'Medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
       case 'High':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-secondary text-muted-foreground';
     }
   };
 
@@ -205,7 +205,7 @@ export function CurrentStrategyCard() {
         </div>
 
         {/* Strategy Classification */}
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg">
+        <div className="p-4 bg-gradient-to-r from-blue-950/40 to-purple-950/40 rounded-lg border border-blue-500/20">
           <h3 className="font-semibold mb-2 flex items-center gap-2">
             <Shield className="h-5 w-5" />
             Strategy Classification
@@ -217,14 +217,14 @@ export function CurrentStrategyCard() {
 
         {/* Warnings if any */}
         {(health < 70 || simulation.risk === 'High') && (
-          <div className="p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <div className="p-4 bg-secondary border-l-4 border-l-orange-500 rounded-lg">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
               <div>
-                <div className="font-semibold text-orange-900 dark:text-orange-100">
+                <div className="font-semibold text-foreground mb-2">
                   Optimization Opportunities
                 </div>
-                <ul className="text-sm text-orange-800 dark:text-orange-200 mt-2 space-y-1">
+                <ul className="text-sm text-muted-foreground space-y-1">
                   {health < 70 && (
                     <li>
                       • Your health score is below optimal. Consider diversifying.

@@ -2,9 +2,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDemoState } from '@/contexts/DemoContext';
+import { UserProfileSelector } from '@/components/UserProfileSelector';
 import { useState, useEffect } from 'react';
-import { User, TrendingUp } from 'lucide-react';
+import { User, TrendingUp, Users } from 'lucide-react';
 
 interface MockWalletModalProps {
   open: boolean;
@@ -51,80 +53,99 @@ export const MockWalletModal = ({ open, onOpenChange }: MockWalletModalProps) =>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Mock Wallet Connect</DialogTitle>
           <DialogDescription>
-            Edit your demo balances or load a preset scenario
+            Switch between demo users or manually edit balances
           </DialogDescription>
         </DialogHeader>
 
-        {/* Preset Buttons */}
-        <div className="flex gap-2 mb-2">
-          <Button onClick={loadBeginner} variant="outline" className="flex-1 gap-2">
-            <User className="w-4 h-4" />
-            Load Beginner
-          </Button>
-          <Button onClick={loadHolder} variant="outline" className="flex-1 gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Load Holder
-          </Button>
-        </div>
+        <Tabs defaultValue="profiles" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profiles">
+              <Users className="w-4 h-4 mr-2" />
+              User Profiles
+            </TabsTrigger>
+            <TabsTrigger value="manual">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Manual Edit
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="eth">ETH Balance</Label>
-            <Input
-              id="eth"
-              type="number"
-              step="0.01"
-              value={eth}
-              onChange={(e) => setEth(e.target.value)}
-            />
-          </div>
+          <TabsContent value="profiles" className="mt-6">
+            <UserProfileSelector onClose={() => onOpenChange(false)} />
+          </TabsContent>
 
-          <div className="space-y-2">
-            <Label htmlFor="eeth">eETH Balance</Label>
-            <Input
-              id="eeth"
-              type="number"
-              step="0.1"
-              value={eeth}
-              onChange={(e) => setEeth(e.target.value)}
-            />
-          </div>
+          <TabsContent value="manual" className="mt-6">
+            {/* Preset Buttons */}
+            <div className="flex gap-2 mb-4">
+              <Button onClick={loadBeginner} variant="outline" className="flex-1 gap-2">
+                <User className="w-4 h-4" />
+                Load Beginner
+              </Button>
+              <Button onClick={loadHolder} variant="outline" className="flex-1 gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Load Holder
+              </Button>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="weeth">weETH Balance</Label>
-            <Input
-              id="weeth"
-              type="number"
-              step="0.1"
-              value={weETH}
-              onChange={(e) => setWeETH(e.target.value)}
-            />
-          </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="eth">ETH Balance</Label>
+                <Input
+                  id="eth"
+                  type="number"
+                  step="0.01"
+                  value={eth}
+                  onChange={(e) => setEth(e.target.value)}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="liquid">Liquid USD Balance</Label>
-            <Input
-              id="liquid"
-              type="number"
-              step="1"
-              value={liquidUSD}
-              onChange={(e) => setLiquidUSD(e.target.value)}
-            />
-          </div>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="eeth">eETH Balance</Label>
+                <Input
+                  id="eeth"
+                  type="number"
+                  step="0.1"
+                  value={eeth}
+                  onChange={(e) => setEeth(e.target.value)}
+                />
+              </div>
 
-        <div className="flex gap-2 pt-2">
-          <Button onClick={resetToDemo} variant="outline" className="flex-1">
-            Reset to Demo
-          </Button>
-          <Button onClick={handleSave} className="flex-1">
-            Save Changes
-          </Button>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="weeth">weETH Balance</Label>
+                <Input
+                  id="weeth"
+                  type="number"
+                  step="0.1"
+                  value={weETH}
+                  onChange={(e) => setWeETH(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="liquid">Liquid USD Balance</Label>
+                <Input
+                  id="liquid"
+                  type="number"
+                  step="1"
+                  value={liquidUSD}
+                  onChange={(e) => setLiquidUSD(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button onClick={resetToDemo} variant="outline" className="flex-1">
+                Reset to Demo
+              </Button>
+              <Button onClick={handleSave} className="flex-1">
+                Save Changes
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

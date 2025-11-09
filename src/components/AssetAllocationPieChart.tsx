@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
+import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useDemoState } from '@/contexts/DemoContext';
 import type { MultiAssetForecastResponse } from '@/lib/types';
@@ -72,17 +79,100 @@ export function AssetAllocationPieChart() {
     return `${entry.value.toFixed(1)}%`;
   };
 
+  // Generate dynamic explanation
+  const generateExplanation = () => {
+    const diversificationScore = calculateDiversificationScore(data.allocation);
+    const allocEntries = Object.entries(data.allocation).filter(([_, v]) => v > 0);
+    const maxAllocation = Math.max(...allocEntries.map(([_, v]) => v));
+    const dominantAsset = allocEntries.find(([_, v]) => v === maxAllocation);
+    const isConcentrated = maxAllocation > 70;
+    const isDiversified = allocEntries.length >= 3 && maxAllocation < 50;
+
+    return {
+      title: "Portfolio Allocation Overview",
+      description: `This pie chart shows how your total portfolio value (${totalValue.toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      })}) is distributed across different assets.`,
+      keyPoints: [
+        `🎯 ${allocEntries.length} active asset${allocEntries.length !== 1 ? 's' : ''} in your portfolio`,
+        `📊 Largest holding: ${dominantAsset?.[0]} at ${dominantAsset?.[1].toFixed(1)}%`,
+        `🎲 Diversification score: ${diversificationScore}/100 ${isDiversified ? '(Well balanced!)' : isConcentrated ? '(Concentrated)' : '(Moderate)'}`,
+        `💡 Higher diversification score = lower concentration risk`,
+        `🔍 Hover over pie slices to see exact percentages and values`
+      ],
+      status: {
+        type: isDiversified ? 'good' : isConcentrated ? 'warning' : 'neutral',
+        message: isDiversified
+          ? 'Healthy diversification - portfolio spread across multiple assets'
+          : isConcentrated
+          ? `High concentration in ${dominantAsset?.[0]} - consider diversifying to reduce risk`
+          : 'Moderate allocation - could benefit from more diversification'
+      }
+    };
+  };
+
+  const explanation = data ? generateExplanation() : null;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Portfolio Allocation</CardTitle>
-        <CardDescription>
-          Current distribution across assets (${totalValue.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{' '}
-          total)
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <CardTitle>Portfolio Allocation</CardTitle>
+              {explanation && (
+                <HoverCard>
+                  <HoverCardTrigger>
+                    <Info className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-96" side="right">
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">{explanation.title}</h4>
+                        <p className="text-xs text-muted-foreground">{explanation.description}</p>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold mb-2">Key Information:</div>
+                        <ul className="text-xs space-y-1">
+                          {explanation.keyPoints.map((point, idx) => (
+                            <li key={idx} className="text-muted-foreground">{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold mb-2">Status:</div>
+                        <div className={`p-2 rounded-lg flex items-start gap-2 border ${
+                          explanation.status.type === 'good'
+                            ? 'bg-green-950/40 border-green-500/20'
+                            : explanation.status.type === 'warning'
+                            ? 'bg-orange-950/40 border-orange-500/20'
+                            : 'bg-blue-950/40 border-blue-500/20'
+                        }`}>
+                          {explanation.status.type === 'good' ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          ) : explanation.status.type === 'warning' ? (
+                            <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                          )}
+                          <span className="text-xs">{explanation.status.message}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              )}
+            </div>
+            <CardDescription>
+              Current distribution across assets (${totalValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{' '}
+              total)
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={350}>

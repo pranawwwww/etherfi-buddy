@@ -21,7 +21,7 @@ interface SimulateResponse {
 }
 
 export const PortfolioTab = () => {
-  const { demoState } = useDemoState();
+  const { demoState, currentUser } = useDemoState();
   const { balances, assumptions } = demoState;
   const { toast } = useToast();
   const [simulateData, setSimulateData] = useState<SimulateResponse | null>(null);
@@ -133,6 +133,26 @@ export const PortfolioTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Active User Profile Banner */}
+      {currentUser && (
+        <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/30">
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">{currentUser.avatar}</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-xl">{currentUser.name}'s Portfolio</CardTitle>
+                  <Badge variant={currentUser.level === 'expert' ? 'default' : 'secondary'}>
+                    {currentUser.level}
+                  </Badge>
+                </div>
+                <CardDescription className="mt-1">{currentUser.description}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* KPI Strip */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
