@@ -6,9 +6,33 @@ import math, json, os
 import httpx
 from etherfi_service import get_live_rates, get_historical_prices, get_apy_history
 
+# Import new modules
+try:
+    from database import init_db
+    from api_endpoints import router as v2_router
+    DB_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Database features not available: {e}")
+    DB_AVAILABLE = False
+
+# Import enhanced risk analysis with real APIs
+try:
+    from enhanced_risk_analysis import get_enhanced_risk_analysis
+    ENHANCED_RISK_AVAILABLE = True
+    print("Enhanced risk analysis with real API data enabled")
+except ImportError as e:
+    print(f"Info: Enhanced risk analysis not available: {e}")
+    print("  Using legacy risk analysis with mock data")
+    ENHANCED_RISK_AVAILABLE = False
+
 APP_ORIGIN = os.getenv("APP_ORIGIN", "http://localhost:8080")
 
-app = FastAPI(title="eFi Navigator API")
+app = FastAPI(
+    title="eFi Navigator API",
+    description="Enhanced API with live data, historical tracking, and AI forecasting",
+    version="2.0.0"
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[APP_ORIGIN],
@@ -16,6 +40,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    if DB_AVAILABLE:
+        try:
+            init_db()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Warning: Database initialization failed: {e}")
+    else:
+        print("Running in legacy mode without database features")
+
+# Include v2 API routes
+if DB_AVAILABLE:
+    app.include_router(v2_router)
 
 # ---------- Models ----------
 class WalletBalances(BaseModel):
@@ -76,6 +116,10 @@ class MultiAssetForecastResp(BaseModel):
 class CorrelationMatrix(BaseModel):
     assets: List[str]
     matrix: List[List[float]]  # correlation coefficients
+
+class PriceForecastRequest(BaseModel):
+    product: str
+    days: int = 30
 
 # ---------- Helpers ----------
 def eth_eq(usd: float, eth_price: float = 3500.0) -> float:
@@ -584,3 +628,319 @@ async def risk_analysis(address: str = "0xabc...1234", validator_index: Optional
         tiles=tiles,
         breakdown=breakdown
     )
+
+# ========= Enhanced Risk Analysis Endpoint with Real APIs =========
+@app.get("/api/risk-analysis-enhanced")
+async def risk_analysis_enhanced(address: str = "0xabc...1234"):
+    """
+    Enhanced risk analysis using REAL data from:
+    - Beaconcha.in: Validator uptime & performance
+    - Uniswap Subgraph: Liquidity depth & slippage
+    - EigenExplorer: AVS concentration & restaking distribution
+
+    Falls back to legacy endpoint if enhanced features unavailable
+    """
+    if ENHANCED_RISK_AVAILABLE:
+        try:
+            return await get_enhanced_risk_analysis(address)
+        except Exception as e:
+            print(f"Error in enhanced risk analysis: {e}")
+            print("Falling back to legacy risk analysis")
+            # Fall through to legacy endpoint
+
+    # Fallback to legacy endpoint
+    return await risk_analysis(address)
+
+
+# ========= Enhanced Portfolio Analysis Endpoint =========
+@app.post("/api/portfolio-analysis-enhanced")
+async def portfolio_analysis_enhanced(
+    eth: float = 0.0,
+    eeth: float = 0.0,
+    weeth: float = 5.0,
+    liquid_usd: float = 1200.0
+):
+    """
+    Enhanced portfolio analysis using REAL data from all APIs:
+    - DefiLlama: Current prices & APY
+    - Beaconcha.in: Validator risk metrics
+    - Uniswap Subgraph: Liquidity depth & slippage
+    - EigenExplorer: Restaking distribution
+
+    Returns comprehensive portfolio analysis with strategy recommendations
+    """
+    try:
+        from enhanced_portfolio_analyzer import analyze_portfolio_with_real_data
+        result = await analyze_portfolio_with_real_data(eth, eeth, weeth, liquid_usd)
+        return result
+    except ImportError:
+        return {
+            "error": "Enhanced portfolio analyzer not available",
+            "message": "Please ensure enhanced_portfolio_analyzer.py is present"
+        }
+    except Exception as e:
+        print(f"Error in enhanced portfolio analysis: {e}")
+        return {
+            "error": "Portfolio analysis failed",
+            "message": str(e)
+        }
+
+
+# ========= Enhanced Chatbot Endpoint =========
+@app.post("/api/ask-enhanced")
+async def ask_enhanced(
+    question: str,
+    context: Optional[Dict[str, Any]] = None,
+    include_market_data: bool = True
+):
+    """
+    Enhanced chatbot endpoint with DeFi knowledge base and live market data.
+
+    Uses Claude AI with:
+    - Comprehensive DeFi product knowledge (eETH, weETH, ETHFI, eBTC)
+    - Live market data from all APIs
+    - Risk and strategy knowledge
+    - DeFi concept explanations
+
+    Args:
+        question: User's question
+        context: Optional additional context (wallet balance, etc.)
+        include_market_data: Whether to include live market data in response
+
+    Returns:
+        ChatResponse with answer, sources, and market data flag
+    """
+    try:
+        from enhanced_chatbot import ask_chatbot
+        result = await ask_chatbot(question, context)
+        return result
+    except ImportError:
+        return {
+            "error": "Enhanced chatbot not available",
+            "message": "Please ensure enhanced_chatbot.py and defi_knowledge_base.py are present"
+        }
+    except Exception as e:
+        print(f"Error in enhanced chatbot: {e}")
+        return {
+            "error": "Chatbot query failed",
+            "message": str(e),
+            "answer": "I'm having trouble answering your question right now. Please try again later.",
+            "sources": [],
+            "market_data_included": False
+        }
+
+
+# ========= Real-Time Price Endpoints =========
+@app.get("/api/prices")
+async def get_prices():
+    """
+    Get current prices for all ether.fi products from DefiLlama.
+
+    Returns real-time prices with timestamps.
+    """
+    try:
+        from defillama_client import DefiLlamaClient
+
+        client = DefiLlamaClient()
+        prices = await client.get_current_prices()
+
+        # Format response to match frontend expectations
+        return {
+            "eETH": {"price": prices.get("eETH", 3500), "timestamp": int(prices.get("timestamp", 0))},
+            "weETH": {"price": prices.get("weETH", 3500), "timestamp": int(prices.get("timestamp", 0))},
+            "ETHFI": {"price": prices.get("ETHFI", 2.5), "timestamp": int(prices.get("timestamp", 0))},
+            "eBTC": {"price": prices.get("eBTC", 68000), "timestamp": int(prices.get("timestamp", 0))}
+        }
+    except Exception as e:
+        print(f"Error fetching prices: {e}")
+        # Return fallback prices
+        import time
+        return {
+            "eETH": {"price": 3500, "timestamp": int(time.time())},
+            "weETH": {"price": 3500, "timestamp": int(time.time())},
+            "ETHFI": {"price": 2.5, "timestamp": int(time.time())},
+            "eBTC": {"price": 68000, "timestamp": int(time.time())}
+        }
+
+
+@app.get("/api/apy")
+async def get_apy_rates():
+    """
+    Get current APY rates for all ether.fi products from DefiLlama pools.
+
+    Returns APY rates with source attribution.
+    """
+    try:
+        from defillama_client import DefiLlamaClient
+
+        client = DefiLlamaClient()
+        apy_data = await client.get_all_apys()
+
+        # Format response to match frontend expectations
+        return {
+            "eETH": {
+                "apy": apy_data.get("eETH", {}).get("apy_total", 3.5),
+                "source": "defillama"
+            },
+            "weETH": {
+                "apy": apy_data.get("weETH", {}).get("apy_total", 3.5),
+                "source": "defillama"
+            },
+            "ETHFI": {
+                "apy": apy_data.get("ETHFI", {}).get("apy_total", 0.0),
+                "source": "governance_token"
+            },
+            "eBTC": {
+                "apy": apy_data.get("eBTC", {}).get("apy_total", 2.0),
+                "source": "btc_staking"
+            }
+        }
+    except Exception as e:
+        print(f"Error fetching APY: {e}")
+        # Return fallback APY
+        return {
+            "eETH": {"apy": 3.5, "source": "fallback"},
+            "weETH": {"apy": 3.5, "source": "fallback"},
+            "ETHFI": {"apy": 0.0, "source": "governance_token"},
+            "eBTC": {"apy": 2.0, "source": "fallback"}
+        }
+
+
+@app.post("/api/price-forecast")
+async def price_forecast(request: PriceForecastRequest):
+    """
+    AI-powered price forecasting using Claude and historical data.
+
+    Args:
+        request: PriceForecastRequest with product name and forecast days
+
+    Returns:
+        Forecast data with predicted price, confidence, reasoning, and risk factors
+    """
+    product = request.product
+    days = request.days
+    
+    try:
+        # Get current price
+        from defillama_client import DefiLlamaClient
+
+        client = DefiLlamaClient()
+        prices = await client.get_current_prices()
+        
+        # Extract price from double-nested structure: prices[product]["price"]["price"]
+        price_data = prices.get(product, {})
+        if isinstance(price_data, dict) and "price" in price_data:
+            inner_price_data = price_data.get("price", {})
+            if isinstance(inner_price_data, dict):
+                current_price = inner_price_data.get("price")
+            else:
+                current_price = inner_price_data
+        else:
+            current_price = None
+        
+        # Fallback to default prices if not found
+        if current_price is None or current_price == 0:
+            default_prices = {
+                "eETH": 3500,
+                "weETH": 3500,
+                "ETHFI": 2.5,
+                "eBTC": 68000
+            }
+            current_price = default_prices.get(product, 3500)
+
+        # Try to use AI forecasting
+        try:
+            from anthropic import Anthropic
+            import os
+
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("ANTHROPIC_API_KEY not set")
+
+            anthropic_client = Anthropic(api_key=api_key)
+
+            # Build prompt for Claude
+            prompt = f"""Analyze the price forecast for {product} over the next {days} days.
+
+Current price: ${current_price}
+
+Product context:
+- eETH: ether.fi liquid staking token (rebasing), tracks ETH price
+- weETH: Wrapped eETH (non-rebasing), typically ~1-3% premium over ETH
+- ETHFI: ether.fi governance token
+- eBTC: ether.fi BTC liquid staking token
+
+Provide a {days}-day price forecast with:
+1. Predicted price (realistic estimate)
+2. Confidence level (high/moderate/low)
+3. Brief reasoning (2-3 sentences)
+4. Key risk factors (2-3 items)
+
+Format your response as JSON:
+{{
+  "predicted_price": <number>,
+  "confidence": "<high|moderate|low>",
+  "reasoning": "<brief analysis>",
+  "risk_factors": ["<factor1>", "<factor2>"]
+}}"""
+
+            response = anthropic_client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=500,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse response
+            import json
+            forecast_text = response.content[0].text.strip()
+
+            # Extract JSON from response (Claude might wrap it in markdown)
+            if "```json" in forecast_text:
+                forecast_text = forecast_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in forecast_text:
+                forecast_text = forecast_text.split("```")[1].split("```")[0].strip()
+
+            forecast_data = json.loads(forecast_text)
+
+            return {
+                "product": product,
+                "current_price": current_price,
+                "forecast_days": days,
+                "forecast": {
+                    "predicted_price": forecast_data.get("predicted_price", current_price * 1.02),
+                    "confidence": forecast_data.get("confidence", "moderate"),
+                    "reasoning": forecast_data.get("reasoning", "AI forecast based on market trends"),
+                    "risk_factors": forecast_data.get("risk_factors", ["Market volatility", "Regulatory changes"])
+                },
+                "historical_data": []
+            }
+
+        except Exception as ai_error:
+            print(f"AI forecasting error: {ai_error}")
+            # Return simple trend-based forecast
+            predicted_price = current_price * 1.02  # Simple 2% increase
+
+            return {
+                "product": product,
+                "current_price": current_price,
+                "forecast_days": days,
+                "forecast": {
+                    "predicted_price": predicted_price,
+                    "confidence": "low",
+                    "reasoning": f"Simple trend-based forecast (AI unavailable). {product} predicted to follow market trends.",
+                    "risk_factors": [
+                        "Market volatility",
+                        "Ethereum network changes",
+                        "Regulatory uncertainty"
+                    ]
+                },
+                "historical_data": []
+            }
+
+    except Exception as e:
+        print(f"Error in price forecast: {e}")
+        return {
+            "error": "Forecast generation failed",
+            "message": str(e)
+        }
