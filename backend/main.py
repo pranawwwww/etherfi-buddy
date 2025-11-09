@@ -77,6 +77,7 @@ class Assumptions(BaseModel):
 class AskReq(BaseModel):
     q: str
     context: Optional[dict] = None
+    messages: Optional[list] = None  # Conversation history
 
 class AskResp(BaseModel):
     answer: str
@@ -209,8 +210,8 @@ async def ask(body: AskReq):
     try:
         from enhanced_chatbot import ask_chatbot
         
-        # Call enhanced chatbot with question and context
-        result = await ask_chatbot(body.q, body.context)
+        # Call enhanced chatbot with question, context, and conversation history
+        result = await ask_chatbot(body.q, body.context, body.messages)
         
         # Return just the answer (frontend expects simple structure)
         return AskResp(answer=result["answer"])

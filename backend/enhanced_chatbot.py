@@ -47,7 +47,8 @@ class EnhancedChatbot:
         self,
         question: str,
         context: Optional[Dict] = None,
-        include_market_data: bool = True
+        include_market_data: bool = True,
+        messages: Optional[list] = None
     ) -> ChatResponse:
         """
         Answer user question using knowledge base and Claude AI
@@ -105,16 +106,44 @@ Please provide a helpful, accurate answer using the context above. Include relev
 """
 
         try:
-            # Call Claude API
+            # Build messages array for Claude
+            claude_messages = []
+            
+            # If conversation history provided, use it (excluding system greeting)
+            if messages and len(messages) > 1:
+                # IMPORTANT: Prepend portfolio context to the conversation
+                # Find the first user message and inject context
+                context_injected = False
+                for i, msg in enumerate(messages):
+                    if msg.get('role') in ['user', 'assistant']:
+                        if msg['role'] == 'user' and not context_injected:
+                            # Inject portfolio context into first user message
+                            enhanced_content = f"{full_context}\n\n---\n\nUser Question: {msg['content']}"
+                            claude_messages.append({
+                                "role": "user",
+                                "content": enhanced_content
+                            })
+                            context_injected = True
+                        else:
+                            # Regular message
+                            claude_messages.append({
+                                "role": msg['role'],
+                                "content": msg['content']
+                            })
+            else:
+                # First message - include full context
+                claude_messages.append({
+                    "role": "user",
+                    "content": user_prompt
+                })
+            
+            # Call Claude API with conversation history
             response = self.client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=500,
                 temperature=0.3,
                 system=system_prompt,
-                messages=[{
-                    "role": "user",
-                    "content": user_prompt
-                }]
+                messages=claude_messages
             )
 
             answer = response.content[0].text.strip()
@@ -250,10 +279,10 @@ Please provide a helpful, accurate answer using the context above. Include relev
 
 
 # Convenience function for API endpoint
-async def ask_chatbot(question: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-    """Ask the enhanced chatbot a question"""
+async def ask_chatbot(question: str, context: Optional[Dict] = None, messages: Optional[list] = None) -> Dict[str, Any]:
+    """Ask the enhanced chatbot a question with optional conversation history"""
     chatbot = EnhancedChatbot()
-    response = await chatbot.answer_question(question, context, include_market_data=True)
+    response = await chatbot.answer_question(question, context, include_market_data=True, messages=messages)
     return response.dict()
 
 
