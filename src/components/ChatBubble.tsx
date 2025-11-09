@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, X, Sparkles, Copy, Check } from 'lucide-react';
+import { MessageCircle, Send, X, Sparkles, Copy, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -119,9 +119,14 @@ export const ChatBubble = () => {
         userLevel: currentUser?.level || 'Beginner',
       };
 
+      // Send conversation history (last 20 messages = 10 exchanges) + current question
+      const conversationHistory = [...messages, userMessage];
+      const recentHistory = conversationHistory.slice(-20); // Keep last 20 messages
+
       const response = await postJSON<{ answer: string }>('/api/ask', { 
         q: input,
-        context: context 
+        context: context,
+        messages: recentHistory  // Send conversation history
       });
       setMessages((prev) => [...prev, { role: 'assistant', content: response.answer }]);
     } catch (error) {
@@ -143,6 +148,25 @@ export const ChatBubble = () => {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
+  };
+
+  const clearChat = () => {
+    const { balances } = demoState;
+    const hasAssets = balances.weETH > 0 || balances.eETH > 0 || balances.ETH > 0;
+    
+    const initialMessage = {
+      role: 'assistant' as const,
+      content: hasAssets 
+        ? `Hi! I can see you have some assets in your portfolio. Ask me about your holdings, strategies to maximize yield, or any DeFi concepts you'd like to understand better! 🚀`
+        : `Hi! I'm your DeFi assistant. Ask me about ether.fi products (eETH, weETH, ETHFI), staking strategies, risks, or any DeFi concepts. I can provide personalized advice based on your portfolio! 💡`,
+    };
+    
+    setMessages([initialMessage]);
+    localStorage.removeItem('chat-history');
+    toast({
+      title: 'Chat cleared',
+      description: 'Conversation history has been reset.',
+    });
   };
 
   const quickActions = [
@@ -180,6 +204,18 @@ export const ChatBubble = () => {
                   Powered by Claude • Context-aware responses
                 </p>
               </div>
+              {messages.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearChat}
+                  className="h-8 px-3 text-xs"
+                  title="Clear chat history"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              )}
             </DialogTitle>
           </DialogHeader>
 
