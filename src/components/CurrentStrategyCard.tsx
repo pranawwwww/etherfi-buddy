@@ -11,15 +11,26 @@ export function CurrentStrategyCard() {
   const { demoState } = useDemoState();
   const [simulation, setSimulation] = useState<SimulateResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [livePrices, setLivePrices] = useState<any>(null);
+  const [liveApy, setLiveApy] = useState<any>(null);
 
   useEffect(() => {
     setLoading(true);
-    api
-      .simulate({
+
+    // Fetch both simulation data and live prices/APY in parallel
+    Promise.all([
+      api.simulate({
         balances: demoState.balances,
         assumptions: demoState.assumptions,
+      }),
+      api.prices().catch(() => null),
+      api.apy().catch(() => null),
+    ])
+      .then(([sim, prices, apy]) => {
+        setSimulation(sim);
+        setLivePrices(prices);
+        setLiveApy(apy);
       })
-      .then(setSimulation)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [demoState]);
@@ -35,14 +46,37 @@ export function CurrentStrategyCard() {
     );
   }
 
-  const ethPrice = 3500;
+  // Use live prices if available, otherwise fallback to static price
+  // Handle double-nested price structure from API
+  const getPrice = (priceData: any) => {
+    if (!priceData) return null;
+    if (typeof priceData === 'number') return priceData;
+    if (priceData && typeof priceData === 'object' && 'price' in priceData) {
+      return typeof priceData.price === 'number' ? priceData.price : priceData.price?.price;
+    }
+    return null;
+  };
+
+  const ethPrice = getPrice(livePrices?.weETH?.price) || getPrice(livePrices?.eETH?.price) || 3500;
+  const eethPrice = getPrice(livePrices?.eETH?.price) || ethPrice;
+  const weethPrice = getPrice(livePrices?.weETH?.price) || ethPrice;
+
+  // Use live APY if available, otherwise fallback to assumptions
+  const eethApy = liveApy?.eETH?.apy || demoState.assumptions.apyStake;
+  const weethApy = liveApy?.weETH?.apy || demoState.assumptions.apyStake;
+  const liquidUsdApy = liveApy?.eETH?.apy || demoState.assumptions.apyLiquidUsd;
+
   const totalEthValue =
     demoState.balances.ETH +
     demoState.balances.eETH +
     demoState.balances.weETH +
     demoState.balances.LiquidUSD / ethPrice;
 
-  const totalUsdValue = totalEthValue * ethPrice;
+  const totalUsdValue =
+    demoState.balances.ETH * ethPrice +
+    demoState.balances.eETH * eethPrice +
+    demoState.balances.weETH * weethPrice +
+    demoState.balances.LiquidUSD;
 
   const annualEthEarnings = totalEthValue * simulation.blendedApy;
   const annualUsdEarnings = annualEthEarnings * ethPrice;
@@ -55,7 +89,7 @@ export function CurrentStrategyCard() {
   );
   const healthStatus = healthBadge(health);
 
-  // Calculate position breakdown
+  // Calculate position breakdown with REAL prices and APY
   const positions = [
     {
       asset: 'ETH',
@@ -63,27 +97,31 @@ export function CurrentStrategyCard() {
       value: demoState.balances.ETH * ethPrice,
       apy: 0,
       earning: 'Earning 0% (Idle)',
+      isLive: false,
     },
     {
       asset: 'eETH',
       amount: demoState.balances.eETH,
-      value: demoState.balances.eETH * ethPrice,
-      apy: demoState.assumptions.apyStake,
-      earning: `Earning ${formatPercentage(demoState.assumptions.apyStake)} APY`,
+      value: demoState.balances.eETH * eethPrice,
+      apy: eethApy,
+      earning: `Earning ${formatPercentage(eethApy)} APY`,
+      isLive: !!liveApy,
     },
     {
       asset: 'weETH',
       amount: demoState.balances.weETH,
-      value: demoState.balances.weETH * ethPrice,
-      apy: demoState.assumptions.apyStake,
-      earning: `Earning ${formatPercentage(demoState.assumptions.apyStake)} APY`,
+      value: demoState.balances.weETH * weethPrice,
+      apy: weethApy,
+      earning: `Earning ${formatPercentage(weethApy)} APY`,
+      isLive: !!liveApy,
     },
     {
       asset: 'Liquid USD',
       amount: demoState.balances.LiquidUSD,
       value: demoState.balances.LiquidUSD,
-      apy: demoState.assumptions.apyLiquidUsd,
-      earning: `Earning ${formatPercentage(demoState.assumptions.apyLiquidUsd)} APY`,
+      apy: liquidUsdApy,
+      earning: `Earning ${formatPercentage(liquidUsdApy)} APY`,
+      isLive: !!liveApy,
     },
   ].filter((p) => p.amount > 0);
 
@@ -182,7 +220,14 @@ export function CurrentStrategyCard() {
                 className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg"
               >
                 <div>
-                  <div className="font-semibold">{position.asset}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{position.asset}</span>
+                    {position.isLive && (
+                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                        Live
+                      </Badge>
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {position.asset === 'Liquid USD'
                       ? formatUSD(position.amount)
@@ -192,7 +237,7 @@ export function CurrentStrategyCard() {
                 <div className="text-right">
                   <div className="font-bold">{formatUSD(position.value)}</div>
                   <div
-                    className={`text-sm ${
+                    className={`text-sm flex items-center justify-end gap-1 ${
                       position.apy > 0 ? 'text-green-600' : 'text-orange-600'
                     }`}
                   >

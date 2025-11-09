@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { api } from "@/lib/api";
 import type { RiskAnalysisResponse } from "@/lib/types";
 
@@ -181,11 +183,19 @@ const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
 const RiskBreakdownItem = ({
   label,
   value,
-  level
+  level,
+  tooltip,
+  aiTooltip,
+  isLoadingAi,
+  onHover
 }: {
   label: string;
   value: string | number;
   level: "Low" | "High" | "Moderate" | string;
+  tooltip?: string;
+  aiTooltip?: string;
+  isLoadingAi?: boolean;
+  onHover?: () => void;
 }) => {
   const getIndicatorColor = (level: string) => {
     switch (level.toLowerCase()) {
@@ -205,6 +215,35 @@ const RiskBreakdownItem = ({
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${getIndicatorColor(level)}`} />
         <span className="text-sm">{label}</span>
+        {(tooltip || aiTooltip) && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info 
+                  className="h-3 w-3 text-muted-foreground cursor-help" 
+                  onMouseEnter={onHover}
+                />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                {isLoadingAi ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                    <span className="text-sm">Analyzing...</span>
+                  </div>
+                ) : aiTooltip ? (
+                  <div>
+                    <p className="font-semibold mb-1 flex items-center gap-1">
+                      <span className="text-purple-400">✨</span> AI Analysis
+                    </p>
+                    <p className="text-sm">{aiTooltip}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm">{tooltip}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{level}</span>
@@ -218,6 +257,8 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
   const [data, setData] = useState<RiskData>(mockData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiExplanations, setAiExplanations] = useState<Record<string, string>>({});
+  const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchRiskData = async () => {
@@ -237,6 +278,23 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
 
     fetchRiskData();
   }, [address, validatorIndex]);
+
+  // Fetch AI explanation for a metric
+  const fetchAiExplanation = async (metricName: string, metricValue: number, context?: Record<string, any>) => {
+    const key = metricName;
+    if (aiExplanations[key] || loadingExplanations[key]) return;
+
+    setLoadingExplanations(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      const response = await api.explainRiskMetric(metricName, metricValue, context);
+      setAiExplanations(prev => ({ ...prev, [key]: response.explanation }));
+    } catch (err) {
+      console.error(`Failed to fetch AI explanation for ${metricName}:`, err);
+    } finally {
+      setLoadingExplanations(prev => ({ ...prev, [key]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -265,7 +323,43 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         {/* Risk Score with Gauge */}
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
-            <CardTitle className="text-lg">Risk Score</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Risk Score</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info 
+                      className="h-4 w-4 text-muted-foreground cursor-help" 
+                      onMouseEnter={() => fetchAiExplanation('risk_score', data.risk_score.score)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {loadingExplanations['risk_score'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                        <span className="text-sm">Analyzing...</span>
+                      </div>
+                    ) : aiExplanations['risk_score'] ? (
+                      <div>
+                        <p className="font-semibold mb-1 flex items-center gap-1">
+                          <span className="text-purple-400">✨</span> AI Analysis
+                        </p>
+                        <p className="text-sm">{aiExplanations['risk_score']}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-semibold mb-1">Overall Risk Score (0-100)</p>
+                        <p className="text-sm">
+                          A combined measure of how safe your investment is. Lower scores (0-30) mean safer, 
+                          higher scores (70-100) mean riskier. This considers validator performance, 
+                          network risks, and concentration issues.
+                        </p>
+                      </div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
             <RiskScoreGauge score={data.risk_score.score} grade={data.risk_score.grade} />
@@ -282,16 +376,28 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
               label="Slashing Probability"
               value={`${(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%`}
               level={data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
+              tooltip="The chance your stake could be penalized (slashed) due to validator misbehavior, downtime, or network issues. Lower is better - it means your validators are performing well."
+              aiTooltip={aiExplanations['slashing_probability']}
+              isLoadingAi={loadingExplanations['slashing_probability']}
+              onHover={() => fetchAiExplanation('slashing_probability', data.tiles.slashing_proxy.proxy_score / 10)}
             />
             <RiskBreakdownItem
               label="AVS Concentration"
               value={`${data.tiles.avs_concentration.largest_avs_pct}%`}
               level={data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate"}
+              tooltip="How much of your stake is in one AVS (Actively Validated Service). High concentration means you're dependent on a single service - spreading across multiple services reduces risk."
+              aiTooltip={aiExplanations['avs_concentration']}
+              isLoadingAi={loadingExplanations['avs_concentration']}
+              onHover={() => fetchAiExplanation('avs_concentration', data.tiles.avs_concentration.largest_avs_pct)}
             />
             <RiskBreakdownItem
               label="Operator Uptime"
               value={`${data.tiles.operator_uptime.uptime_7d_pct}%`}
               level={data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate"}
+              tooltip="How reliably your validators have been online over the past 7 days. Higher is better - consistent uptime means you're earning rewards and avoiding penalties."
+              aiTooltip={aiExplanations['operator_uptime']}
+              isLoadingAi={loadingExplanations['operator_uptime']}
+              onHover={() => fetchAiExplanation('operator_uptime', data.tiles.operator_uptime.uptime_7d_pct)}
             />
           </CardContent>
         </Card>
@@ -302,7 +408,39 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         {/* AVS Concentration */}
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
-            <CardTitle className="text-sm">AVS Concentration</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">AVS Concentration</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info 
+                      className="h-3 w-3 text-muted-foreground cursor-help"
+                      onMouseEnter={() => fetchAiExplanation('avs_concentration', data.tiles.avs_concentration.largest_avs_pct)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {loadingExplanations['avs_concentration'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                        <span className="text-sm">Analyzing...</span>
+                      </div>
+                    ) : aiExplanations['avs_concentration'] ? (
+                      <div>
+                        <p className="font-semibold mb-1 flex items-center gap-1">
+                          <span className="text-purple-400">✨</span> AI Analysis
+                        </p>
+                        <p className="text-sm">{aiExplanations['avs_concentration']}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm">
+                        The percentage of your stake allocated to the largest AVS. Think of it like 
+                        diversification - putting all your eggs in one basket is riskier than spreading them out.
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-primary">{data.tiles.avs_concentration.largest_avs_pct}</div>
@@ -313,7 +451,39 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         {/* Slashing Probability */}
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
-            <CardTitle className="text-sm">Slashing Probability</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Slashing Probability</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info 
+                      className="h-3 w-3 text-muted-foreground cursor-help"
+                      onMouseEnter={() => fetchAiExplanation('slashing_probability', data.tiles.slashing_proxy.proxy_score / 10)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {loadingExplanations['slashing_probability'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                        <span className="text-sm">Analyzing...</span>
+                      </div>
+                    ) : aiExplanations['slashing_probability'] ? (
+                      <div>
+                        <p className="font-semibold mb-1 flex items-center gap-1">
+                          <span className="text-purple-400">✨</span> AI Analysis
+                        </p>
+                        <p className="text-sm">{aiExplanations['slashing_probability']}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm">
+                        The estimated likelihood of losing part of your stake due to validator issues. 
+                        This is like insurance risk - lower means your validators are well-maintained and unlikely to face penalties.
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-accent">{(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%</div>
@@ -326,7 +496,39 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         {/* Liquidity Depth */}
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
-            <CardTitle className="text-sm">Liquidity Depth</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Liquidity Depth</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info 
+                      className="h-3 w-3 text-muted-foreground cursor-help"
+                      onMouseEnter={() => fetchAiExplanation('liquidity_depth', data.tiles.liquidity_depth.health_index)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {loadingExplanations['liquidity_depth'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                        <span className="text-sm">Analyzing...</span>
+                      </div>
+                    ) : aiExplanations['liquidity_depth'] ? (
+                      <div>
+                        <p className="font-semibold mb-1 flex items-center gap-1">
+                          <span className="text-purple-400">✨</span> AI Analysis
+                        </p>
+                        <p className="text-sm">{aiExplanations['liquidity_depth']}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm">
+                        How easy it is to sell your assets without affecting the price. Higher is better - 
+                        it means there's enough trading volume to exit your position quickly if needed.
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-primary">{data.tiles.liquidity_depth.health_index}</div>
@@ -337,7 +539,39 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         {/* Restake Distribution */}
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
-            <CardTitle className="text-sm">Restake Distribution</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Restake Distribution</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info 
+                      className="h-3 w-3 text-muted-foreground cursor-help"
+                      onMouseEnter={() => fetchAiExplanation('restake_distribution', data.breakdown?.distribution.restaked_pct || 0)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {loadingExplanations['restake_distribution'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                        <span className="text-sm">Analyzing...</span>
+                      </div>
+                    ) : aiExplanations['restake_distribution'] ? (
+                      <div>
+                        <p className="font-semibold mb-1 flex items-center gap-1">
+                          <span className="text-purple-400">✨</span> AI Analysis
+                        </p>
+                        <p className="text-sm">{aiExplanations['restake_distribution']}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm">
+                        The percentage of your assets that are restaked to earn additional rewards. 
+                        Restaking can increase returns but also adds complexity and potential risks.
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-primary">{data.breakdown?.distribution.restaked_pct}%</div>

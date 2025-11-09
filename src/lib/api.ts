@@ -71,4 +71,84 @@ export const api = {
     const queryString = params.toString();
     return getJSON<RiskAnalysisResponse>(`/api/risk-analysis${queryString ? `?${queryString}` : ''}`);
   },
+
+  // Real-time price data from DefiLlama
+  prices: () =>
+    getJSON<{
+      eETH: { price: number; timestamp: number };
+      weETH: { price: number; timestamp: number };
+      ETHFI: { price: number; timestamp: number };
+      eBTC: { price: number; timestamp: number };
+    }>('/api/prices'),
+
+  // Current APY rates from DefiLlama
+  apy: () =>
+    getJSON<{
+      eETH: { apy: number; source: string };
+      weETH: { apy: number; source: string };
+      ETHFI: { apy: number; source: string };
+      eBTC: { apy: number; source: string };
+    }>('/api/apy'),
+
+  // AI-powered price forecast
+  priceForecast: (product: string, days: number = 30) =>
+    postJSON<{
+      product: string;
+      current_price: number;
+      forecast_days: number;
+      forecast: {
+        predicted_price: number;
+        confidence: string;
+        reasoning: string;
+        risk_factors: string[];
+      };
+      historical_data: Array<{ date: string; price: number }>;
+    }>('/api/price-forecast', { product, days }),
+
+  // Enhanced portfolio analysis with real APIs
+  portfolioAnalysisEnhanced: (balances: {
+    eth: number;
+    eeth: number;
+    weeth: number;
+    liquid_usd: number;
+  }) =>
+    postJSON<{
+      total_value_usd: number;
+      assets: Array<{
+        name: string;
+        balance: number;
+        price_usd: number;
+        value_usd: number;
+        apy: number;
+        annual_yield_usd: number;
+      }>;
+      metrics: {
+        total_annual_yield_usd: number;
+        average_apy: number;
+        risk_score: number;
+        risk_grade: string;
+        liquidity_health: number;
+        restaking_ratio: number;
+      };
+      recommendations: Array<{
+        strategy: string;
+        reason: string;
+        risk_impact: string;
+        priority: string;
+      }>;
+      data_sources: string[];
+    }>('/api/portfolio-analysis-enhanced', balances),
+
+  // AI-powered risk metric explanations
+  explainRiskMetric: (metricName: string, metricValue: number, additionalContext?: Record<string, any>) =>
+    postJSON<{
+      metric: string;
+      value: number;
+      explanation: string;
+      ai_powered: boolean;
+    }>('/api/explain-risk-metric', {
+      metric_name: metricName,
+      metric_value: metricValue,
+      additional_context: additionalContext,
+    }),
 };

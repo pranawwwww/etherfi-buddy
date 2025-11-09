@@ -1,13 +1,21 @@
 import { CurrentStrategyCard } from '@/components/CurrentStrategyCard';
 import { StrategyComparisonTable } from '@/components/StrategyComparisonTable';
 import { OpportunityCostCalculator } from '@/components/OpportunityCostCalculator';
+import { LivePriceDisplay } from '@/components/LivePriceDisplay';
+import { AIForecastPanel } from '@/components/AIForecastPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function StrategyComparisonTab() {
   return (
     <div className="space-y-6">
-      {/* Always show current strategy at top */}
+      {/* Live Market Data - Always visible at top */}
+      <LivePriceDisplay />
+
+      {/* Current Strategy with Live Prices */}
       <CurrentStrategyCard />
+
+      {/* AI-Powered Forecasts */}
+      <AIForecastPanel />
 
       {/* Sub-tabs for detailed comparisons */}
       <Tabs defaultValue="comparison" className="w-full">
