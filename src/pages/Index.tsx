@@ -6,7 +6,6 @@ import { ChatBubble } from '@/components/ChatBubble';
 import { MockWalletModal } from '@/components/MockWalletModal';
 import { PortfolioTab } from '@/components/tabs/PortfolioTab';
 import { ForecastTab } from '@/components/tabs/ForecastTab';
-import { AnalyticsTab } from '@/components/tabs/AnalyticsTab';
 import { StrategyComparisonTab } from '@/components/tabs/StrategyComparisonTab';
 import { DemoProvider } from '@/contexts/DemoContext';
 
@@ -21,11 +20,10 @@ const Index = () => {
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               <TabsTrigger value="strategies">Strategies</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="forecast">Forecast</TabsTrigger>
+              <TabsTrigger value="health">Health</TabsTrigger>
             </TabsList>
 
             <TabsContent value="portfolio" className="animate-fade-in">
@@ -36,11 +34,7 @@ const Index = () => {
               <StrategyComparisonTab />
             </TabsContent>
 
-            <TabsContent value="analytics" className="animate-fade-in">
-              <AnalyticsTab />
-            </TabsContent>
-
-            <TabsContent value="forecast" className="animate-fade-in">
+            <TabsContent value="health" className="animate-fade-in">
               <ForecastTab />
             </TabsContent>
           </Tabs>
