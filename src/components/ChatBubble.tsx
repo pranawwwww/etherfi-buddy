@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, X, Sparkles, Copy, Check, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, X, Copy, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -180,29 +180,19 @@ export const ChatBubble = () => {
     <>
       <Button
         onClick={() => openChat()}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 z-50 transition-all hover:scale-110"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50 hover:opacity-90 transition-opacity"
         size="icon"
       >
-        <Sparkles className="w-6 h-6" />
+        <MessageCircle className="w-6 h-6" />
       </Button>
 
       <Dialog open={isChatOpen} onOpenChange={(open) => open ? openChat() : closeChat()}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  AI Assistant
-                  <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/10 text-green-600 dark:text-green-400 font-medium">
-                    Online
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground font-normal mt-0.5">
-                  Powered by Claude • Context-aware responses
-                </p>
+            <DialogTitle className="flex items-center justify-between text-xl">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="w-5 h-5 text-muted-foreground" />
+                <span>Assistant</span>
               </div>
               {messages.length > 1 && (
                 <Button
@@ -302,7 +292,7 @@ export const ChatBubble = () => {
                         <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                         <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
-                      <span className="text-sm text-foreground">Claude is thinking...</span>
+                      <span className="text-sm text-foreground">Loading...</span>
                     </div>
                   </div>
                 </div>

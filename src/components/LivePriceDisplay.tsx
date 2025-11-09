@@ -81,15 +81,12 @@ export function LivePriceDisplay() {
   ] as const;
 
   return (
-    <Card className="border-blue-500/20 bg-gradient-to-r from-blue-950/20 to-purple-950/20">
+    <Card>
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
-            <h3 className="text-lg font-semibold">Live Market Data</h3>
-            <Badge variant="outline" className="text-xs">
-              Real-time
-            </Badge>
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-lg font-semibold">Market Data</h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
