@@ -1,0 +1,149 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { api } from '@/lib/api';
+import type { CorrelationMatrix } from '@/lib/types';
+
+export function CorrelationHeatmap() {
+  const [data, setData] = useState<CorrelationMatrix | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .correlationMatrix()
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Asset Correlation Matrix</CardTitle>
+          <CardDescription>Loading correlation data...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Asset Correlation Matrix</CardTitle>
+          <CardDescription>Failed to load data</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  // Helper to get color based on correlation value
+  const getColor = (value: number): string => {
+    if (value >= 0.9) return 'bg-red-600';
+    if (value >= 0.7) return 'bg-orange-500';
+    if (value >= 0.5) return 'bg-yellow-500';
+    if (value >= 0.3) return 'bg-green-400';
+    if (value >= 0.1) return 'bg-blue-400';
+    return 'bg-gray-400';
+  };
+
+  const getTextColor = (value: number): string => {
+    return value >= 0.5 ? 'text-white' : 'text-gray-900';
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Asset Correlation Matrix</CardTitle>
+        <CardDescription>
+          How assets move together (1.0 = perfect correlation, 0.0 = no correlation)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <div className="inline-block min-w-full">
+            {/* Header row */}
+            <div className="flex">
+              <div className="w-20 h-20 flex items-center justify-center" />
+              {data.assets.map((asset) => (
+                <div
+                  key={asset}
+                  className="w-20 h-20 flex items-center justify-center font-semibold text-sm"
+                >
+                  {asset}
+                </div>
+              ))}
+            </div>
+
+            {/* Data rows */}
+            {data.assets.map((rowAsset, rowIdx) => (
+              <div key={rowAsset} className="flex">
+                {/* Row label */}
+                <div className="w-20 h-20 flex items-center justify-center font-semibold text-sm">
+                  {rowAsset}
+                </div>
+
+                {/* Correlation cells */}
+                {data.matrix[rowIdx].map((value, colIdx) => (
+                  <div
+                    key={`${rowIdx}-${colIdx}`}
+                    className={`w-20 h-20 flex items-center justify-center text-sm font-medium border border-gray-200 ${getColor(
+                      value
+                    )} ${getTextColor(value)}`}
+                    title={`${rowAsset} vs ${data.assets[colIdx]}: ${value.toFixed(2)}`}
+                  >
+                    {value.toFixed(2)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="mt-6">
+          <div className="text-sm font-semibold mb-2">Correlation Strength</div>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-600 rounded" />
+              <span className="text-xs">Very High (0.9+)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-orange-500 rounded" />
+              <span className="text-xs">High (0.7-0.9)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-yellow-500 rounded" />
+              <span className="text-xs">Medium (0.5-0.7)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-400 rounded" />
+              <span className="text-xs">Low (0.3-0.5)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-blue-400 rounded" />
+              <span className="text-xs">Very Low (0.1-0.3)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-400 rounded" />
+              <span className="text-xs">None (0-0.1)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Insights */}
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+          <div className="text-sm font-semibold mb-2">Key Insights</div>
+          <ul className="text-sm space-y-1 text-muted-foreground">
+            <li>• ETH derivatives (eETH, weETH) are highly correlated (0.98+)</li>
+            <li>• Stablecoins (LiquidUSD) have low correlation with crypto assets</li>
+            <li>• BTC and ETH show moderate correlation (0.65)</li>
+            <li>
+              • Diversify across low-correlation assets to reduce portfolio volatility
+            </li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

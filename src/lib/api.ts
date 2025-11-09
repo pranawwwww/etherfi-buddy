@@ -1,3 +1,14 @@
+import type {
+  SimulateRequest,
+  SimulateResponse,
+  ForecastResponse,
+  AskRequest,
+  AskResponse,
+  RatesResponse,
+  MultiAssetForecastResponse,
+  CorrelationMatrix,
+} from './types';
+
 export async function postJSON<T>(url: string, body: any): Promise<T> {
   const response = await fetch(url, {
     method: 'POST',
@@ -28,3 +39,27 @@ export async function getJSON<T>(url: string): Promise<T> {
 
   return response.json();
 }
+
+// Typed API functions
+export const api = {
+  simulate: (body: SimulateRequest) =>
+    postJSON<SimulateResponse>('/api/simulate', body),
+
+  forecast: (principal: number, apy: number, months: number = 12) =>
+    getJSON<ForecastResponse>(`/api/forecast?principal=${principal}&apy=${apy}&months=${months}`),
+
+  multiAssetForecast: (body: SimulateRequest, months: number = 12, ethPrice: number = 3500) =>
+    postJSON<MultiAssetForecastResponse>(`/api/multi-asset-forecast?months=${months}&eth_price=${ethPrice}`, body),
+
+  correlationMatrix: () =>
+    getJSON<CorrelationMatrix>('/api/correlation-matrix'),
+
+  ask: (body: AskRequest) =>
+    postJSON<AskResponse>('/api/ask', body),
+
+  rates: () =>
+    getJSON<RatesResponse>('/api/rates'),
+
+  health: () =>
+    getJSON<{ status: string }>('/health'),
+};
