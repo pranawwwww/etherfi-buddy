@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useDemoState } from '@/contexts/DemoContext';
 import { getJSON } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { LineChart, TrendingUp } from 'lucide-react';
+import { LineChart, TrendingUp, Shield } from 'lucide-react';
 
 interface DataPoint {
   month: number;
@@ -60,12 +60,30 @@ export const ForecastTab = () => {
       )
     : 1;
 
+  // Health panel logic
+  const getHealthDetails = () => {
+    const diversification = balances.LiquidUSD / (balances.weETH * 3000 + balances.LiquidUSD);
+    const leverageExposure = balances.LiquidUSD > (balances.weETH * 3000 * 0.3) ? 'Medium' : balances.LiquidUSD > 0 ? 'Low' : 'None';
+    
+    const diversificationLabel = 
+      diversification > 0.3 && diversification < 0.7 ? 'Balanced' : 
+      diversification < 0.2 || diversification > 0.8 ? 'Concentrated' : 'Moderate';
+
+    return {
+      diversification: diversificationLabel,
+      leverage: leverageExposure,
+      contracts: 'EtherFi, Liquid vaults'
+    };
+  };
+
+  const health = getHealthDetails();
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Growth Forecast</h2>
         <p className="text-muted-foreground">
-          Historical data and 12-month projection based on your holdings
+          12-month projection and portfolio health analysis
         </p>
       </div>
 
@@ -212,6 +230,84 @@ export const ForecastTab = () => {
               No data available
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Health Panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Portfolio Health Panel
+          </CardTitle>
+          <CardDescription>Key risk factors and exposure analysis</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="bg-secondary/30 border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Diversification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg font-bold text-primary">{health.diversification}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ETH vs USD vs BTC exposure
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-secondary/30 border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Leverage Exposure</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg font-bold text-accent">{health.leverage}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Based on borrowed position size
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-secondary/30 border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Contract Exposure</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm font-medium text-foreground">{health.contracts}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Smart contract dependencies
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-6 space-y-2">
+            <h4 className="font-semibold text-sm">Health Checklist</h4>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 text-sm">
+                <span className={health.diversification === 'Balanced' ? 'text-success' : 'text-warning'}>
+                  {health.diversification === 'Balanced' ? '✓' : '⚠'}
+                </span>
+                <span className="text-muted-foreground">
+                  <strong>Diversification:</strong> {health.diversification === 'Balanced' ? 'Well balanced across asset types' : 'Consider more diversification'}
+                </span>
+              </div>
+              <div className="flex items-start gap-2 text-sm">
+                <span className={health.leverage === 'None' || health.leverage === 'Low' ? 'text-success' : 'text-warning'}>
+                  {health.leverage === 'None' || health.leverage === 'Low' ? '✓' : '⚠'}
+                </span>
+                <span className="text-muted-foreground">
+                  <strong>Leverage:</strong> {health.leverage === 'None' ? 'No leverage risk' : health.leverage === 'Low' ? 'Low liquidation risk' : 'Monitor closely for liquidation risk'}
+                </span>
+              </div>
+              <div className="flex items-start gap-2 text-sm">
+                <span className="text-muted-foreground">ℹ</span>
+                <span className="text-muted-foreground">
+                  <strong>Protocol exposure:</strong> Using established EtherFi and Liquid vault contracts
+                </span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

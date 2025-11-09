@@ -8,47 +8,35 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    --background: 250 20% 8%;
     --foreground: 0 0% 98%;
-
-    --card: 240 10% 8%;
+    --card: 250 15% 12%;
     --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 8%;
+    --popover: 250 15% 10%;
     --popover-foreground: 0 0% 98%;
-
-    --primary: 188 95% 35%;
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 240 4% 16%;
+    --primary: 270 80% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 250 10% 18%;
     --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-
-    --accent: 188 95% 35%;
-    --accent-foreground: 0 0% 98%;
-
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-
+    --muted: 250 10% 20%;
+    --muted-foreground: 250 5% 60%;
+    --accent: 280 85% 70%;
+    --accent-foreground: 0 0% 100%;
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-
-    --destructive: 0 84% 60%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 188 95% 35%;
-
+    --border: 250 10% 22%;
+    --input: 250 10% 22%;
+    --ring: 270 80% 65%;
     --radius: 1rem;
-
-    --chart-1: 188 95% 35%;
-    --chart-2: 142 76% 36%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 271 91% 65%;
+    --chart-1: 270 80% 65%;
+    --chart-2: 190 80% 50%;
+    --chart-3: 30 90% 60%;
+    --chart-4: 340 75% 60%;
+    --chart-5: 160 70% 50%;
   }
 }
 
