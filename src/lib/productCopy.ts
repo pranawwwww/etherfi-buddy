@@ -30,7 +30,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "DeFi users who need liquid collateral",
       "Long-term ETH believers",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid-staking/eeth",
   },
 
   weETH: {
@@ -54,7 +54,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Users wanting to leverage their ETH",
       "Borrowers seeking capital efficiency",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid-staking/weeth",
   },
 
   "Liquid USD": {
@@ -78,7 +78,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Users who borrowed stables against weETH",
       "Conservative DeFi investors",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/overview",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/liquidusd",
   },
 
   "Liquid ETH": {
@@ -102,7 +102,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Users seeking diversified yield sources",
       "Liquidity providers",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/overview",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/liquideth",
   },
 
   "Liquid BTC": {
@@ -126,7 +126,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Multi-chain investors",
       "Users comfortable with wrapped assets",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/overview",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/liquid/liquidbtc",
   },
 
   WBTC: {
@@ -150,7 +150,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Users comfortable with custodial solutions",
       "Multi-chain DeFi users",
     ],
-    learnMoreUrl: "https://wbtc.network/",
+    learnMoreUrl: "https://wbtc.network/dashboard/order-book",
   },
 
   beHYPE: {
@@ -174,7 +174,7 @@ export const PRODUCT_COPY: Record<string, ProductInfo> = {
       "Active governance participants",
       "Users seeking protocol exposure",
     ],
-    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/",
+    learnMoreUrl: "https://etherfi.gitbook.io/etherfi/governance",
   },
 };
 

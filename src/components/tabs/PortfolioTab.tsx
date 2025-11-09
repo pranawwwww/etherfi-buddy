@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, TrendingUp, Shield, Lightbulb, Info } from 'lucide-react';
 import { useDemoState } from '@/contexts/DemoContext';
 import { ProductMapNode } from '@/components/ProductMapNode';
+import { EtherFiProductEcosystem } from '@/components/EtherFiProductEcosystem';
 import { useState } from 'react';
 import { postJSON } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -219,20 +220,8 @@ export const PortfolioTab = () => {
         </CardContent>
       </Card>
 
-      {/* Product Distribution Map */}
-      <Card>
-        <CardHeader>
-          <CardTitle>EtherFi Product Map</CardTitle>
-          <CardDescription>Click any product to learn more about risks, rewards, and strategies</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((product) => (
-              <ProductMapNode key={product.id} product={product} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Product Distribution Map - NEW INTERACTIVE ECOSYSTEM */}
+      <EtherFiProductEcosystem />
 
       {/* Strategy Snapshot */}
       <Card>
