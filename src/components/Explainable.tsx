@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, MessageCircle, Loader2 } from 'lucide-react';
+import { HelpCircle, MessageCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { postJSON } from '@/lib/api';
@@ -180,12 +180,6 @@ export const Explainable = ({
         aria-label={`Explain ${term}`}
       >
         {children}
-        {(isHovered || isOpen) && variant === 'inline' && (
-          <Sparkles 
-            className="inline-block ml-1 w-3 h-3 text-primary animate-pulse" 
-            style={{ verticalAlign: 'middle' }}
-          />
-        )}
       </span>
 
       {/* Popover */}
@@ -202,22 +196,17 @@ export const Explainable = ({
             animation: 'slideIn 0.2s ease-out'
           }}
         >
-          <Card className="border border-primary/20 shadow-lg bg-card/95 backdrop-blur">
+          <Card className="border shadow-lg bg-card">
             <div className="p-4">
               {/* Header */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-foreground">
-                      {term}
-                    </h3>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {type}
-                    </p>
-                  </div>
+              <div className="flex items-start justify-between mb-3 pb-3 border-b">
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">
+                    {term}
+                  </h3>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {type}
+                  </p>
                 </div>
               </div>
 
@@ -265,43 +254,43 @@ export const Explainable = ({
                 <>
                   <div className="flex items-center gap-1 mb-3 pb-3 border-t pt-3">
                     <span className="text-xs text-muted-foreground mr-2">
-                      Detail level:
+                      Level:
                     </span>
                     <Button
                       variant={level === 'beginner' ? 'default' : 'outline'}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-3 text-xs"
                       onClick={() => handleLevelChange('beginner')}
                     >
-                      🧒 ELI5
+                      Simple
                     </Button>
                     <Button
                       variant={level === 'standard' ? 'default' : 'outline'}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-3 text-xs"
                       onClick={() => handleLevelChange('standard')}
                     >
-                      📚 Standard
+                      Standard
                     </Button>
                     <Button
                       variant={level === 'advanced' ? 'default' : 'outline'}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-3 text-xs"
                       onClick={() => handleLevelChange('advanced')}
                     >
-                      🔬 Technical
+                      Technical
                     </Button>
                   </div>
 
                   {/* Action Button */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     className="w-full h-8 text-xs"
                     onClick={openInChat}
                   >
                     <MessageCircle className="w-3 h-3 mr-1" />
-                    Ask more in chat
+                    Continue in chat
                   </Button>
                 </>
               )}

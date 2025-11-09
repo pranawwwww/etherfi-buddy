@@ -18,19 +18,17 @@ export const Header = ({ onMockConnect }: HeaderProps) => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Coins className="w-6 h-6 text-primary" />
-            </div>
+            <Coins className="w-6 h-6 text-primary" />
             <div>
               <h1 className="text-xl font-bold text-foreground">eFi Navigator</h1>
-              <p className="text-xs text-muted-foreground">Beginner-friendly EtherFi co-pilot (demo)</p>
+              <p className="text-xs text-muted-foreground">Portfolio Management</p>
             </div>
           </div>
 
           <div className="flex-1 flex items-center gap-2 w-full md:w-auto">
             <Input
               type="text"
-              placeholder="Paste address (demo)"
+              placeholder="Connect wallet or paste address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className="flex-1 bg-secondary border-border"

@@ -75,20 +75,16 @@ export function AIForecastPanel() {
   };
 
   return (
-    <Card className="border-purple-500/20 bg-gradient-to-r from-purple-950/20 to-blue-950/20">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-400" />
-            <CardTitle>AI-Powered 30-Day Price Forecasts</CardTitle>
+          <div>
+            <CardTitle>30-Day Price Forecasts</CardTitle>
+            <CardDescription>
+              Predictions based on historical trends and market conditions
+            </CardDescription>
           </div>
-          <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/20">
-            Claude Sonnet 4.5
-          </Badge>
         </div>
-        <CardDescription>
-          AI analysis based on historical trends and market conditions
-        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -104,7 +100,7 @@ export function AIForecastPanel() {
                 className="p-4 bg-secondary/50 rounded-lg flex items-center justify-center gap-2"
               >
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating AI forecast for {product.name}...</span>
+                <span>Loading forecast for {product.name}...</span>
               </div>
             );
           }
