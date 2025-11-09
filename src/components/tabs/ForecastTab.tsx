@@ -142,12 +142,12 @@ const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
       <div className="relative w-64 h-32">
         {/* Background arc */}
         <svg className="w-full h-full" viewBox="0 0 200 100">
-          {/* Gradient arc from orange to green */}
+          {/* Gradient arc from green to red (low to high risk) */}
           <defs>
             <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{ stopColor: "#f97316", stopOpacity: 1 }} />
+              <stop offset="0%" style={{ stopColor: "#22c55e", stopOpacity: 1 }} />
               <stop offset="50%" style={{ stopColor: "#eab308", stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: "#22c55e", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "#ef4444", stopOpacity: 1 }} />
             </linearGradient>
           </defs>
           {/* Background arc */}
