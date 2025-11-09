@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import { api } from "@/lib/api";
 import type { RiskAnalysisResponse } from "@/lib/types";
+import { Explainable } from "@/components/Explainable";
 
 interface RiskData {
   address?: string;
@@ -372,7 +373,20 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         <Card className="bg-secondary/30 border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Risk Score</CardTitle>
+              <CardTitle className="text-lg">
+                <Explainable 
+                  term="Risk Score" 
+                  type="metric"
+                  data={{ 
+                    value: data.risk_score.score,
+                    grade: data.risk_score.grade,
+                    riskLevel: data.risk_score.score < 30 ? 'Low' : data.risk_score.score < 60 ? 'Moderate' : 'High',
+                    scale: '0-100'
+                  }}
+                >
+                  Risk Score
+                </Explainable>
+              </CardTitle>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -421,7 +435,20 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
           </CardHeader>
           <CardContent className="space-y-2">
             <RiskBreakdownItem
-              label="Slashing Probability"
+              label={
+                <Explainable 
+                  term="Slashing Probability" 
+                  type="metric" 
+                  data={{ 
+                    value: (data.tiles.slashing_proxy.proxy_score / 10).toFixed(1),
+                    level: data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High",
+                    rawScore: data.tiles.slashing_proxy.proxy_score,
+                    unit: '%'
+                  }}
+                >
+                  Slashing Probability
+                </Explainable>
+              }
               value={`${(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%`}
               level={data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
               tooltip="The chance your stake could be penalized (slashed) due to validator misbehavior, downtime, or network issues. Lower is better - it means your validators are performing well."
@@ -430,7 +457,20 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
               onHover={() => fetchAiExplanation('slashing_probability', data.tiles.slashing_proxy.proxy_score / 10)}
             />
             <RiskBreakdownItem
-              label="AVS Concentration"
+              label={
+                <Explainable 
+                  term="AVS Concentration" 
+                  type="metric" 
+                  data={{ 
+                    value: data.tiles.avs_concentration.largest_avs_pct,
+                    level: data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate",
+                    largestAvs: data.tiles.avs_concentration.largest_avs || 'N/A',
+                    unit: '%'
+                  }}
+                >
+                  AVS Concentration
+                </Explainable>
+              }
               value={`${data.tiles.avs_concentration.largest_avs_pct}%`}
               level={data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate"}
               tooltip="How much of your stake is in one AVS (Actively Validated Service). High concentration means you're dependent on a single service - spreading across multiple services reduces risk."
@@ -439,7 +479,20 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
               onHover={() => fetchAiExplanation('avs_concentration', data.tiles.avs_concentration.largest_avs_pct)}
             />
             <RiskBreakdownItem
-              label="Operator Uptime"
+              label={
+                <Explainable 
+                  term="Operator Uptime" 
+                  type="metric" 
+                  data={{ 
+                    value: data.tiles.operator_uptime.uptime_7d_pct,
+                    level: data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate",
+                    period: '7 days',
+                    unit: '%'
+                  }}
+                >
+                  Operator Uptime
+                </Explainable>
+              }
               value={`${data.tiles.operator_uptime.uptime_7d_pct}%`}
               level={data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate"}
               tooltip="How reliably your validators have been online over the past 7 days. Higher is better - consistent uptime means you're earning rewards and avoiding penalties."

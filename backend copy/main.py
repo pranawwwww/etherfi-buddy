@@ -4,11 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import math, json, os
 import httpx
-from dotenv import load_dotenv
 from etherfi_service import get_live_rates, get_historical_prices, get_apy_history
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Import new modules
 try:
@@ -91,7 +87,6 @@ class Strategy(BaseModel):
 class SimReq(BaseModel):
     balances: WalletBalances
     assumptions: Assumptions
-    ethPrice: Optional[float] = 3500.0
 
 class SimResp(BaseModel):
     blendedApy: float
@@ -136,8 +131,8 @@ def blended_apy(weeth: float, lusd: float, a: Assumptions) -> float:
     tot = (w + u) or 1.0
     return (w/tot)*a.apyStake + (u/tot)*a.apyLiquidUsd
 
-def risk_badge(weeth: float, lusd: float, eth_price: float = 3500.0) -> str:
-    tot = (weeth or 0.0) + eth_eq(lusd or 0.0, eth_price)
+def risk_badge(weeth: float, lusd: float) -> str:
+    tot = (weeth or 0.0) + eth_eq(lusd or 0.0)
     conc = (weeth / tot) if tot else 0
     return "High" if conc > 0.8 else "Medium" if conc > 0.5 else "Low"
 
@@ -169,9 +164,8 @@ def health():
 @app.post("/api/simulate", response_model=SimResp)
 def simulate(body: SimReq):
     a, b = body.assumptions, body.balances
-    eth_price = body.ethPrice if body.ethPrice else 3500.0
     b_apy = blended_apy(b.weETH, b.LiquidUSD, a)
-    risk = risk_badge(b.weETH, b.LiquidUSD, eth_price)
+    risk = risk_badge(b.weETH, b.LiquidUSD)
     strats = build_strategies(b.weETH, a)
     return SimResp(blendedApy=b_apy, risk=risk, strategies=strats)
 
@@ -956,181 +950,6 @@ Format your response as JSON:
 
 
 # AI-powered risk metric explanations
-class ExplainRequest(BaseModel):
-    term: str
-    type: str = "concept"  # product, balance, metric, concept, strategy
-    level: str = "standard"  # beginner, standard, advanced
-    data: Optional[Dict[str, Any]] = None
-    userContext: Optional[Dict[str, Any]] = None
-
-
-@app.post("/api/explain")
-async def explain_anything(request: ExplainRequest):
-    """
-    Universal AI-powered explanation endpoint.
-    Explains any term, metric, or concept with user's actual data.
-    """
-    try:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            return {
-                "explanation": get_static_universal_explanation(request.term, request.type, request.level)
-            }
-
-        from anthropic import Anthropic
-        client = Anthropic(api_key=api_key)
-
-        # Build context-aware prompt based on type
-        explanation_prompt = build_explanation_prompt(
-            term=request.term,
-            term_type=request.type,
-            level=request.level,
-            data=request.data or {},
-            user_context=request.userContext or {}
-        )
-
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=400,
-            temperature=0.3,
-            messages=[{"role": "user", "content": explanation_prompt}]
-        )
-
-        explanation = response.content[0].text.strip()
-
-        return {"explanation": explanation}
-
-    except Exception as e:
-        print(f"Error in explain endpoint: {e}")
-        return {
-            "explanation": get_static_universal_explanation(request.term, request.type, request.level)
-        }
-
-
-def build_explanation_prompt(term: str, term_type: str, level: str, data: Dict, user_context: Dict) -> str:
-    """Build smart explanation prompt based on context"""
-    
-    # Extract user info
-    portfolio = user_context.get('portfolio', {})
-    user_level = user_context.get('userLevel', 'Beginner')
-    user_profile = user_context.get('userProfile', 'Unknown')
-    
-    # Level-specific instructions
-    level_instructions = {
-        "beginner": """
-Explain like I'm 5 (ELI5): Use simple language, everyday analogies, no jargon.
-Keep it friendly and encouraging. 2-3 short sentences max.
-Example: "weETH is like a receipt for your staked ETH. The receipt gets more valuable over time!"
-""",
-        "standard": """
-Standard explanation: Clear, informative, some technical terms explained.
-Include specific numbers from user's data. 3-4 sentences.
-Balance between accessible and informative.
-""",
-        "advanced": """
-Technical explanation: Precise, detailed, use proper terminology.
-Include calculations, contract addresses, technical specs when relevant.
-4-5 sentences with specific implementation details.
-"""
-    }
-    
-    # Type-specific context
-    type_context = {
-        "product": f"This is an ether.fi product/token. User currently holds: {json.dumps(portfolio)}",
-        "balance": f"This is a balance/value in user's portfolio: {json.dumps(data)}. Total portfolio: ${portfolio.get('totalValueUSD', 0):.2f}",
-        "metric": f"This is a performance/risk metric with value: {json.dumps(data)}. User's context: {json.dumps(portfolio)}",
-        "concept": "This is a DeFi concept or technical term. Explain in context of ether.fi and user's situation.",
-        "strategy": f"This is a DeFi strategy. User profile: {user_profile} ({user_level}). Portfolio: {json.dumps(portfolio)}"
-    }
-    
-    prompt = f"""You are explaining DeFi concepts to a {user_level} user in an ether.fi portfolio app.
-
-TERM TO EXPLAIN: "{term}"
-TYPE: {term_type}
-{type_context.get(term_type, '')}
-
-{level_instructions.get(level, level_instructions['standard'])}
-
-CRITICAL DATA TO USE:
-The data object contains ACTUAL values you MUST reference:
-{json.dumps(data, indent=2)}
-
-IMPORTANT RULES:
-- **ALWAYS reference specific values from the data object** (e.g., "Your slashing probability is **2.8%** which is **Low**")
-- Use the user's portfolio data: {json.dumps(portfolio, indent=2)}
-- Be specific and personal ("your balance", "your **{data.get('value')}%** {term}")
-- Use **bold** for ALL numbers and key terms from the data
-- Keep it scannable with short paragraphs
-- For beginner: Use analogies and zero jargon
-- For standard: Balance clarity with accuracy  
-- For advanced: Include technical details, addresses, calculations
-- NO generic responses - tie it to THIS user's EXACT situation using the data values
-- End with a subtle *Educational only - not financial advice.* (only if discussing money/investment)
-
-Generate the explanation now:"""
-
-    return prompt
-
-
-def get_static_universal_explanation(term: str, term_type: str, level: str) -> str:
-    """Fallback explanations when API unavailable"""
-    
-    explanations = {
-        # Products
-        "weETH": {
-            "beginner": "**weETH** is like a special wrapper for your staked ETH. Instead of your balance growing, the wrapper becomes more valuable! You can trade it or use it while still earning rewards. 🎁",
-            "standard": "**weETH** (Wrapped eETH) is a non-rebasing version of ether.fi's liquid staking token. Your balance stays constant, but the weETH/ETH exchange rate increases as staking rewards accrue. It's designed for better DeFi compatibility.",
-            "advanced": "**weETH** is an ERC-20 wrapper (0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee) around rebasing eETH. Exchange rate appreciates ~4% annually from staking yield. Compatible with lending protocols, DEX pools, and restaking via EigenLayer."
-        },
-        "eETH": {
-            "beginner": "**eETH** is your staked ETH earning rewards! Your balance automatically grows every day as you earn staking rewards (~3-4% per year). It's like magic money that increases while you sleep! ✨",
-            "standard": "**eETH** is ether.fi's liquid staking token. When you stake ETH, you receive eETH that rebases (grows in balance) as staking rewards accrue. Current APY ~3-4%. You can use it in DeFi while earning rewards.",
-            "advanced": "**eETH** (0x35fA164735182de50811E8e2E824cFb9B6118ac2) is a rebasing LST earning native Ethereum staking yield plus MEV rewards. Implements ERC-20 with rebase functionality. Protected by DVT via SSV Network. Composable with DeFi primitives."
-        },
-        "LiquidUSD": {
-            "beginner": "**LiquidUSD** is like a high-interest savings account for your dollars! It automatically finds the best places to earn interest (~10% per year) while keeping your money available to withdraw anytime. 💰",
-            "standard": "**LiquidUSD** is ether.fi's USD-denominated yield vault. Deposits are automatically allocated to vetted yield strategies earning ~10% APY. No lockup periods - maintain full liquidity while earning.",
-            "advanced": "**LiquidUSD** is a yield aggregation vault implementing automated strategy allocation across lending markets, stablecoin protocols, and yield farms. Risk-adjusted optimization with instant withdrawal capability. ~10% APY from diversified sources."
-        },
-        
-        # Concepts
-        "DVT": {
-            "beginner": "**DVT** is like having 3 backup drivers for your validator. If one falls asleep, the others keep driving! This means your validator almost never goes offline, so you don't lose money. 🚗",
-            "standard": "**DVT (Distributed Validator Technology)** splits validator key shares across multiple operators. If one operator has issues, others maintain consensus participation. Dramatically reduces downtime and slashing risk.",
-            "advanced": "**DVT** implements threshold cryptography (Shamir's Secret Sharing) to distribute validator duties across n operators with m-of-n consensus. Reduces single points of failure. ether.fi uses SSV Network implementation with 4-of-7 threshold configuration."
-        },
-        "APY": {
-            "beginner": "**APY** shows how much your money grows in a year, including the magic of compound interest (earning interest on your interest!). Higher APY = your money grows faster! 📈",
-            "standard": "**APY (Annual Percentage Yield)** accounts for compounding - earning returns on your returns. Example: 10% APY means $1000 becomes $1100 after one year, including compounded gains.",
-            "advanced": "**APY** = (1 + r/n)^n - 1, where r is nominal rate and n is compounding frequency. Differs from APR which excludes compounding effects. Critical for comparing yields across protocols with different compounding schedules."
-        },
-        "slashing": {
-            "beginner": "**Slashing** is like a penalty fee if your validator misbehaves or goes offline for too long. Don't worry - ether.fi uses special technology (DVT) to protect you from this! 🛡️",
-            "standard": "**Slashing** is an Ethereum penalty for validator misbehavior (double signing, extended downtime). Penalties range from 0.5-100% of stake. ether.fi mitigates this with DVT protection and professional operators.",
-            "advanced": "**Slashing** implements two mechanisms: (1) Attestation penalties for downtime (minor, ~0.5-1 ETH), (2) Proposer slashing for equivocation (severe, entire stake). ether.fi's DVT via SSV provides 4-of-7 fault tolerance, requiring 4 simultaneous operator failures for downtime."
-        },
-        "restaking": {
-            "beginner": "**Restaking** is like using your staked ETH to also help secure other networks, earning EXTRA rewards on top! It's double-duty for your crypto. 🎯",
-            "standard": "**Restaking** (via EigenLayer) lets you reuse your staked ETH to secure additional networks called AVS. Earn both staking rewards (~4%) AND restaking rewards (~2-3%) for total ~6-7% APY.",
-            "advanced": "**Restaking** via EigenLayer extends Ethereum's economic security to AVS (Actively Validated Services). LST holders delegate to operators who validate AVS. Introduces additional slashing conditions per AVS but enables incremental yield without additional capital."
-        },
-        "LTV": {
-            "beginner": "**LTV** shows how much you can borrow compared to what you put up as collateral. 50% LTV means if you put up $100, you can borrow $50. Lower LTV = safer! 🏦",
-            "standard": "**LTV (Loan-to-Value)** ratio determines borrowing capacity. 50% LTV on $10,000 collateral = $5,000 max borrow. Lower LTV reduces liquidation risk during market volatility.",
-            "advanced": "**LTV** = (Loan Amount / Collateral Value) × 100. Most protocols maintain health factor = (Collateral × Liquidation LTV) / Debt. Liquidation triggers when LTV exceeds protocol threshold (typically 70-85% depending on asset volatility)."
-        }
-    }
-    
-    # Try to find explanation
-    term_key = term.replace(" ", "").lower()
-    for key, levels in explanations.items():
-        if key.lower() in term_key or term_key in key.lower():
-            return levels.get(level, levels.get("standard", ""))
-    
-    # Generic fallback
-    return f"**{term}** is a {term_type} in DeFi. *Ask more in the main chat for detailed explanation!*"
-
-
 class RiskMetricExplainRequest(BaseModel):
     metric_name: str
     metric_value: float
