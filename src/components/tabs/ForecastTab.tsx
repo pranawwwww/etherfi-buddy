@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import type { RiskAnalysisResponse } from "@/lib/types";
 
@@ -56,6 +58,16 @@ interface RiskData {
     };
   };
 }
+
+// Tooltip explanations for each risk metric
+const RISK_EXPLANATIONS = {
+  slashingProbability: "The likelihood of losing staked ETH due to validator penalties. Lower is better. This is calculated based on operator performance, client diversity, and historical slashing events.",
+  avsConcentration: "How much of your restaked assets are allocated to a single service (AVS). High concentration means higher risk if that service has issues. Diversification across multiple services is safer.",
+  operatorUptime: "The percentage of time your validator is online and performing duties correctly. Higher uptime (above 99%) means more reliable rewards and lower risk of penalties.",
+  liquidityDepth: "How easily you can trade or exit your position. Higher health index means you can buy/sell with minimal price impact. Important for when you need to move funds quickly.",
+  restakeDistribution: "The percentage of your assets that are restaked vs. base staking. Restaking offers higher rewards but comes with additional risks from the protocols you're securing.",
+  riskScore: "An overall measure of portfolio risk from 0-100. Lower scores (green) indicate safer positions with better diversification and uptime. Higher scores (red) suggest concentrated risk or performance issues."
+};
 
 // Mock data for development
 const mockData: RiskData = {
@@ -178,14 +190,52 @@ const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
   );
 };
 
+const MetricCard = ({
+  title,
+  value,
+  subtitle,
+  tooltip
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  tooltip?: string;
+}) => {
+  return (
+    <Card className="bg-secondary/30 border-border">
+      <CardHeader>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          {tooltip && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-sm">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-4xl font-bold text-primary">{value}</div>
+        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+};
+
 const RiskBreakdownItem = ({
   label,
   value,
-  level
+  level,
+  tooltip
 }: {
   label: string;
   value: string | number;
   level: "Low" | "High" | "Moderate" | string;
+  tooltip?: string;
 }) => {
   const getIndicatorColor = (level: string) => {
     switch (level.toLowerCase()) {
@@ -205,6 +255,16 @@ const RiskBreakdownItem = ({
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${getIndicatorColor(level)}`} />
         <span className="text-sm">{label}</span>
+        {tooltip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="text-sm">{tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{level}</span>
@@ -250,27 +310,38 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Title */}
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
-        <p className="text-muted-foreground">
-          Key risk factors and exposure analysis
-          {error && <span className="text-yellow-500 ml-2">({error})</span>}
-        </p>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Page Title */}
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
+          <p className="text-muted-foreground">
+            Key risk factors and exposure analysis
+            {error && <span className="text-yellow-500 ml-2">({error})</span>}
+          </p>
+        </div>
 
-      {/* Top Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Risk Score with Gauge */}
-        <Card className="bg-secondary/30 border-border">
-          <CardHeader>
-            <CardTitle className="text-lg">Risk Score</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RiskScoreGauge score={data.risk_score.score} grade={data.risk_score.grade} />
-          </CardContent>
-        </Card>
+        {/* Top Metrics Grid */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Risk Score with Gauge */}
+          <Card className="bg-secondary/30 border-border">
+            <CardHeader>
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-lg">Risk Score</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">{RISK_EXPLANATIONS.riskScore}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <RiskScoreGauge score={data.risk_score.score} grade={data.risk_score.grade} />
+            </CardContent>
+          </Card>
 
         {/* Risk Breakdown */}
         <Card className="bg-secondary/30 border-border">
@@ -282,16 +353,19 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
               label="Slashing Probability"
               value={`${(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%`}
               level={data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
+              tooltip={RISK_EXPLANATIONS.slashingProbability}
             />
             <RiskBreakdownItem
               label="AVS Concentration"
               value={`${data.tiles.avs_concentration.largest_avs_pct}%`}
               level={data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate"}
+              tooltip={RISK_EXPLANATIONS.avsConcentration}
             />
             <RiskBreakdownItem
               label="Operator Uptime"
               value={`${data.tiles.operator_uptime.uptime_7d_pct}%`}
               level={data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate"}
+              tooltip={RISK_EXPLANATIONS.operatorUptime}
             />
           </CardContent>
         </Card>
@@ -299,53 +373,36 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
 
       {/* Bottom Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-4">
-        {/* AVS Concentration */}
-        <Card className="bg-secondary/30 border-border">
-          <CardHeader>
-            <CardTitle className="text-sm">AVS Concentration</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-primary">{data.tiles.avs_concentration.largest_avs_pct}</div>
-            <p className="text-xs text-muted-foreground mt-1">Largest AVS</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="AVS Concentration"
+          value={data.tiles.avs_concentration.largest_avs_pct}
+          subtitle="Largest AVS"
+          tooltip={RISK_EXPLANATIONS.avsConcentration}
+        />
 
-        {/* Slashing Probability */}
-        <Card className="bg-secondary/30 border-border">
-          <CardHeader>
-            <CardTitle className="text-sm">Slashing Probability</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-accent">{(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Slashing Probability"
+          value={`${(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%`}
+          subtitle={data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
+          tooltip={RISK_EXPLANATIONS.slashingProbability}
+        />
 
-        {/* Liquidity Depth */}
-        <Card className="bg-secondary/30 border-border">
-          <CardHeader>
-            <CardTitle className="text-sm">Liquidity Depth</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-primary">{data.tiles.liquidity_depth.health_index}</div>
-            <p className="text-xs text-muted-foreground mt-1">Health Index</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Liquidity Depth"
+          value={data.tiles.liquidity_depth.health_index}
+          subtitle="Health Index"
+          tooltip={RISK_EXPLANATIONS.liquidityDepth}
+        />
 
-        {/* Restake Distribution */}
-        <Card className="bg-secondary/30 border-border">
-          <CardHeader>
-            <CardTitle className="text-sm">Restake Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-primary">{data.breakdown?.distribution.restaked_pct}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Restaked</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Restake Distribution"
+          value={`${data.breakdown?.distribution.restaked_pct}%`}
+          subtitle="Restaked"
+          tooltip={RISK_EXPLANATIONS.restakeDistribution}
+        />
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 
