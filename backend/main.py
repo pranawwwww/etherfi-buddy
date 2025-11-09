@@ -1049,15 +1049,20 @@ TYPE: {term_type}
 
 {level_instructions.get(level, level_instructions['standard'])}
 
+CRITICAL DATA TO USE:
+The data object contains ACTUAL values you MUST reference:
+{json.dumps(data, indent=2)}
+
 IMPORTANT RULES:
-- Use the user's ACTUAL data when relevant (e.g., "You hold 5.0 weETH worth $16,200")
-- Be specific and personal ("your balance", "your portfolio")
-- Use **bold** for key numbers and terms
+- **ALWAYS reference specific values from the data object** (e.g., "Your slashing probability is **2.8%** which is **Low**")
+- Use the user's portfolio data: {json.dumps(portfolio, indent=2)}
+- Be specific and personal ("your balance", "your **{data.get('value')}%** {term}")
+- Use **bold** for ALL numbers and key terms from the data
 - Keep it scannable with short paragraphs
 - For beginner: Use analogies and zero jargon
 - For standard: Balance clarity with accuracy  
 - For advanced: Include technical details, addresses, calculations
-- NO generic responses - tie it to THIS user's situation when possible
+- NO generic responses - tie it to THIS user's EXACT situation using the data values
 - End with a subtle *Educational only - not financial advice.* (only if discussing money/investment)
 
 Generate the explanation now:"""

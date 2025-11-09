@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { postJSON } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useDemoState } from '@/contexts/DemoContext';
+import { useChatContext } from '@/contexts/ChatContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -15,7 +16,7 @@ interface Message {
 }
 
 export const ChatBubble = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isChatOpen, openChat, closeChat, prefilledMessage, clearPrefilledMessage } = useChatContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,21 +59,35 @@ export const ChatBubble = () => {
 
   // Auto-focus input when dialog opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isChatOpen && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isChatOpen]);
+
+  // Handle prefilled message from explainer
+  useEffect(() => {
+    if (prefilledMessage && isChatOpen) {
+      setInput(prefilledMessage);
+      clearPrefilledMessage();
+      // Focus input after setting the message
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }, [prefilledMessage, isChatOpen, clearPrefilledMessage]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        if (isChatOpen) {
+          closeChat();
+        } else {
+          openChat();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isChatOpen, openChat, closeChat]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -140,14 +155,14 @@ export const ChatBubble = () => {
   return (
     <>
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => openChat()}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 z-50 transition-all hover:scale-110"
         size="icon"
       >
         <Sparkles className="w-6 h-6" />
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isChatOpen} onOpenChange={(open) => open ? openChat() : closeChat()}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl">

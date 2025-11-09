@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { postJSON } from '@/lib/api';
 import { useDemoState } from '@/contexts/DemoContext';
+import { useChatContext } from '@/contexts/ChatContext';
 import ReactMarkdown from 'react-markdown';
 
 interface ExplainableProps {
@@ -30,6 +31,7 @@ export const Explainable = ({
   const [isLoading, setIsLoading] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('bottom');
   const { demoState } = useDemoState();
+  const { openChat } = useChatContext();
   const triggerRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -133,10 +135,27 @@ export const Explainable = ({
   };
 
   const openInChat = () => {
-    // This would trigger the main chat with the question pre-filled
-    // For now, just close the popover
+    // Build a contextual question based on the term and data
+    let question = '';
+    
+    if (type === 'product') {
+      question = `Tell me more about ${term} - how it works, benefits, and risks for my portfolio`;
+    } else if (type === 'balance') {
+      question = `Can you analyze my ${term} and give me specific recommendations?`;
+    } else if (type === 'metric') {
+      const value = data?.value || '';
+      question = `Explain my ${term}${value ? ` of ${value}` : ''} - what does this mean for me and what should I do?`;
+    } else if (type === 'concept') {
+      question = `Explain ${term} in detail and how it relates to my current portfolio`;
+    } else if (type === 'strategy') {
+      question = `Should I consider the ${term}? What are the pros and cons for my situation?`;
+    } else {
+      question = `Tell me more about ${term}`;
+    }
+    
+    // Close the popover and open chat with the question
     setIsOpen(false);
-    // TODO: Add event to open chat with question
+    openChat(question);
   };
 
   return (

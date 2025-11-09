@@ -8,6 +8,7 @@ import { formatPercentage, formatETH, formatUSD } from '@/lib/helpers';
 import type { SimulateResponse } from '@/lib/types';
 import { ArrowRight, TrendingUp, TrendingDown, Minus, ExternalLink } from 'lucide-react';
 import { StrategyExecutionModal } from '@/components/StrategyExecutionModal';
+import { Explainable } from '@/components/Explainable';
 
 export function StrategyComparisonTable() {
   const { demoState } = useDemoState();
@@ -118,14 +119,51 @@ export function StrategyComparisonTable() {
                     </Badge>
                   </div>
                 </th>
-                <th className="text-center py-3 px-4 font-semibold">Conservative</th>
-                <th className="text-center py-3 px-4 font-semibold">Active</th>
+                <th className="text-center py-3 px-4 font-semibold">
+                  <Explainable 
+                    term="Conservative Strategy" 
+                    type="strategy"
+                    data={{
+                      apy: conservativeApy,
+                      risk: 'Low',
+                      complexity: 'Very Simple'
+                    }}
+                  >
+                    <span>Conservative</span>
+                  </Explainable>
+                </th>
+                <th className="text-center py-3 px-4 font-semibold">
+                  <Explainable 
+                    term="Active Strategy" 
+                    type="strategy"
+                    data={{
+                      apy: activeApy,
+                      risk: 'Medium-High',
+                      complexity: 'Moderate'
+                    }}
+                  >
+                    <span>Active</span>
+                  </Explainable>
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, idx) => (
                 <tr key={row.metric} className={idx % 2 === 0 ? 'bg-secondary/30' : ''}>
-                  <td className="py-3 px-4 font-medium">{row.metric}</td>
+                  <td className="py-3 px-4 font-medium">
+                    <Explainable 
+                      term={row.metric}
+                      type={row.format === 'risk' ? 'concept' : 'metric'}
+                      data={{
+                        currentValue: row.current,
+                        conservativeValue: row.conservative,
+                        activeValue: row.active,
+                        metricType: row.metric
+                      }}
+                    >
+                      <span>{row.metric}</span>
+                    </Explainable>
+                  </td>
                   <td className="text-center py-3 px-4 bg-primary/5">
                     {renderCell(row.current, row.format)}
                   </td>

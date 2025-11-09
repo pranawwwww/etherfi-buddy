@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { TrendingUp, TrendingDown, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Explainable } from '@/components/Explainable';
 
 interface PriceData {
   eETH: { price: { price: number; symbol: string; timestamp: number; confidence: number; decimals: number } | number; timestamp: number };
@@ -121,26 +122,60 @@ export function LivePriceDisplay() {
                 className="p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`font-semibold ${product.color}`}>
-                    {product.name}
-                  </span>
+                  <Explainable 
+                    term={product.name} 
+                    type="product"
+                    data={{
+                      currentPrice: price,
+                      currentAPY: apy,
+                      source: apyData[product.key].source
+                    }}
+                  >
+                    <span className={`font-semibold ${product.color}`}>
+                      {product.name}
+                    </span>
+                  </Explainable>
                   <Badge variant="secondary" className="text-xs">
                     {apyData[product.key].source}
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold mb-1">
-                  ${price.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
+                <Explainable 
+                  term={`${product.name} Price`}
+                  type="metric"
+                  data={{
+                    value: price,
+                    asset: product.name,
+                    unit: 'USD',
+                    source: apyData[product.key].source,
+                    timestamp: lastUpdate.toISOString()
+                  }}
+                >
+                  <div className="text-2xl font-bold mb-1">
+                    ${price.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                </Explainable>
                 <div className="flex items-center gap-1 text-sm">
                   {apy > 0 ? (
                     <>
                       <TrendingUp className="h-3 w-3 text-green-500" />
-                      <span className="text-green-500 font-medium">
-                        {apy.toFixed(2)}% APY
-                      </span>
+                      <Explainable 
+                        term={`${product.name} APY`}
+                        type="metric"
+                        data={{
+                          value: apy,
+                          asset: product.name,
+                          unit: '%',
+                          type: 'Annual Percentage Yield',
+                          source: apyData[product.key].source
+                        }}
+                      >
+                        <span className="text-green-500 font-medium">
+                          {apy.toFixed(2)}% APY
+                        </span>
+                      </Explainable>
                     </>
                   ) : (
                     <>

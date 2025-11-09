@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { formatETH, formatUSD, formatPercentage, healthScore, healthBadge } from '@/lib/helpers';
 import type { SimulateResponse } from '@/lib/types';
 import { TrendingUp, AlertTriangle, Shield, Zap } from 'lucide-react';
+import { Explainable } from '@/components/Explainable';
 
 export function CurrentStrategyCard() {
   const { demoState } = useDemoState();
@@ -162,49 +163,106 @@ export function CurrentStrategyCard() {
             </CardTitle>
             <CardDescription>What you're holding right now</CardDescription>
           </div>
-          <Badge className={getRiskColor(simulation.risk)} variant="outline">
-            {simulation.risk} Risk
-          </Badge>
+          <Explainable 
+            term="Risk Level" 
+            type="metric"
+            data={{
+              level: simulation.risk,
+              totalValue: totalUsdValue,
+              healthScore: health,
+              positions: positions.length
+            }}
+          >
+            <Badge className={getRiskColor(simulation.risk)} variant="outline">
+              {simulation.risk} Risk
+            </Badge>
+          </Explainable>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
         {/* Summary Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Total Value</div>
-            <div className="text-2xl font-bold">{formatUSD(totalUsdValue)}</div>
-            <div className="text-xs text-muted-foreground">
-              {formatETH(totalEthValue, 2)}
+          <Explainable 
+            term="Total Portfolio Value"
+            type="balance"
+            data={{
+              valueUSD: totalUsdValue,
+              valueETH: totalEthValue,
+              ethPrice: ethPrice,
+              positions: positions.map(p => ({ asset: p.asset, value: p.value }))
+            }}
+          >
+            <div className="text-center p-4 bg-secondary rounded-lg">
+              <div className="text-sm text-muted-foreground">Total Value</div>
+              <div className="text-2xl font-bold">{formatUSD(totalUsdValue)}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatETH(totalEthValue, 2)}
+              </div>
             </div>
-          </div>
+          </Explainable>
 
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Blended APY</div>
-            <div className="text-2xl font-bold text-green-600">
-              {formatPercentage(simulation.blendedApy)}
+          <Explainable 
+            term="Blended APY"
+            type="metric"
+            data={{
+              value: simulation.blendedApy * 100,
+              unit: '%',
+              positions: positions.map(p => ({ asset: p.asset, apy: p.apy, value: p.value })),
+              totalValue: totalUsdValue
+            }}
+          >
+            <div className="text-center p-4 bg-secondary rounded-lg">
+              <div className="text-sm text-muted-foreground">Blended APY</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatPercentage(simulation.blendedApy)}
+              </div>
+              <div className="text-xs text-muted-foreground">Current yield</div>
             </div>
-            <div className="text-xs text-muted-foreground">Current yield</div>
-          </div>
+          </Explainable>
 
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Annual Earnings</div>
-            <div className="text-2xl font-bold">~{formatETH(annualEthEarnings, 3)}</div>
-            <div className="text-xs text-muted-foreground">
-              {formatUSD(annualUsdEarnings)}
+          <Explainable 
+            term="Annual Earnings"
+            type="metric"
+            data={{
+              earningsETH: annualEthEarnings,
+              earningsUSD: annualUsdEarnings,
+              blendedAPY: simulation.blendedApy * 100,
+              totalValueETH: totalEthValue,
+              totalValueUSD: totalUsdValue
+            }}
+          >
+            <div className="text-center p-4 bg-secondary rounded-lg">
+              <div className="text-sm text-muted-foreground">Annual Earnings</div>
+              <div className="text-2xl font-bold">~{formatETH(annualEthEarnings, 3)}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatUSD(annualUsdEarnings)}
+              </div>
             </div>
-          </div>
+          </Explainable>
 
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Health Score</div>
-            <div className="flex items-center justify-center gap-2">
-              <div
-                className={`w-3 h-3 rounded-full ${getHealthColor(healthStatus)}`}
-              />
-              <div className="text-2xl font-bold">{health}/100</div>
+          <Explainable 
+            term="Portfolio Health Score"
+            type="metric"
+            data={{
+              score: health,
+              status: healthStatus,
+              riskLevel: simulation.risk,
+              totalValue: totalUsdValue,
+              diversification: (positions.length > 1 ? 'Diversified' : 'Concentrated')
+            }}
+          >
+            <div className="text-center p-4 bg-secondary rounded-lg">
+              <div className="text-sm text-muted-foreground">Health Score</div>
+              <div className="flex items-center justify-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${getHealthColor(healthStatus)}`}
+                />
+                <div className="text-2xl font-bold">{health}/100</div>
+              </div>
+              <div className="text-xs text-muted-foreground">{healthStatus}</div>
             </div>
-            <div className="text-xs text-muted-foreground">{healthStatus}</div>
-          </div>
+          </Explainable>
         </div>
 
         {/* Position Breakdown */}

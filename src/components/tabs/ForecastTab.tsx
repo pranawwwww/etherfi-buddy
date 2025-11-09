@@ -376,7 +376,12 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
                 <Explainable 
                   term="Risk Score" 
                   type="metric"
-                  data={{ score: data.risk_score.score, grade: data.risk_score.grade }}
+                  data={{ 
+                    value: data.risk_score.score,
+                    grade: data.risk_score.grade,
+                    riskLevel: data.risk_score.score < 30 ? 'Low' : data.risk_score.score < 60 ? 'Moderate' : 'High',
+                    scale: '0-100'
+                  }}
                 >
                   Risk Score
                 </Explainable>
@@ -430,7 +435,16 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
           <CardContent className="space-y-2">
             <RiskBreakdownItem
               label={
-                <Explainable term="Slashing" type="concept" data={{ probability: data.tiles.slashing_proxy.proxy_score / 10 }}>
+                <Explainable 
+                  term="Slashing Probability" 
+                  type="metric" 
+                  data={{ 
+                    value: (data.tiles.slashing_proxy.proxy_score / 10).toFixed(1),
+                    level: data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High",
+                    rawScore: data.tiles.slashing_proxy.proxy_score,
+                    unit: '%'
+                  }}
+                >
                   Slashing Probability
                 </Explainable>
               }
@@ -443,7 +457,16 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
             />
             <RiskBreakdownItem
               label={
-                <Explainable term="AVS Concentration" type="concept" data={{ concentration: data.tiles.avs_concentration.largest_avs_pct }}>
+                <Explainable 
+                  term="AVS Concentration" 
+                  type="metric" 
+                  data={{ 
+                    value: data.tiles.avs_concentration.largest_avs_pct,
+                    level: data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate",
+                    largestAvs: data.tiles.avs_concentration.largest_avs || 'N/A',
+                    unit: '%'
+                  }}
+                >
                   AVS Concentration
                 </Explainable>
               }
@@ -456,7 +479,16 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
             />
             <RiskBreakdownItem
               label={
-                <Explainable term="Operator Uptime" type="metric" data={{ uptime: data.tiles.operator_uptime.uptime_7d_pct }}>
+                <Explainable 
+                  term="Operator Uptime" 
+                  type="metric" 
+                  data={{ 
+                    value: data.tiles.operator_uptime.uptime_7d_pct,
+                    level: data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate",
+                    period: '7 days',
+                    unit: '%'
+                  }}
+                >
                   Operator Uptime
                 </Explainable>
               }
