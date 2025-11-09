@@ -59,6 +59,16 @@ interface RiskData {
   };
 }
 
+// Tooltip explanations for each risk metric
+const RISK_EXPLANATIONS = {
+  slashingProbability: "The likelihood of losing staked ETH due to validator penalties. Lower is better. This is calculated based on operator performance, client diversity, and historical slashing events.",
+  avsConcentration: "How much of your restaked assets are allocated to a single service (AVS). High concentration means higher risk if that service has issues. Diversification across multiple services is safer.",
+  operatorUptime: "The percentage of time your validator is online and performing duties correctly. Higher uptime (above 99%) means more reliable rewards and lower risk of penalties.",
+  liquidityDepth: "How easily you can trade or exit your position. Higher health index means you can buy/sell with minimal price impact. Important for when you need to move funds quickly.",
+  restakeDistribution: "The percentage of your assets that are restaked vs. base staking. Restaking offers higher rewards but comes with additional risks from the protocols you're securing.",
+  riskScore: "An overall measure of portfolio risk from 0-100. Lower scores (green) indicate safer positions with better diversification and uptime. Higher scores (red) suggest concentrated risk or performance issues."
+};
+
 // Mock data for development
 const mockData: RiskData = {
   risk_score: {
@@ -132,12 +142,12 @@ const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
       <div className="relative w-64 h-32">
         {/* Background arc */}
         <svg className="w-full h-full" viewBox="0 0 200 100">
-          {/* Gradient arc from orange to green */}
+          {/* Gradient arc from green to red (low to high risk) */}
           <defs>
             <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{ stopColor: "#f97316", stopOpacity: 1 }} />
+              <stop offset="0%" style={{ stopColor: "#22c55e", stopOpacity: 1 }} />
               <stop offset="50%" style={{ stopColor: "#eab308", stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: "#22c55e", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "#ef4444", stopOpacity: 1 }} />
             </linearGradient>
           </defs>
           {/* Background arc */}
@@ -177,6 +187,42 @@ const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
         <span className="text-xs text-muted-foreground">High</span>
       </div>
     </div>
+  );
+};
+
+const MetricCard = ({
+  title,
+  value,
+  subtitle,
+  tooltip
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  tooltip?: string;
+}) => {
+  return (
+    <Card className="bg-secondary/30 border-border">
+      <CardHeader>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          {tooltip && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-sm">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-4xl font-bold text-primary">{value}</div>
+        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -308,15 +354,16 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Title */}
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
-        <p className="text-muted-foreground">
-          Key risk factors and exposure analysis
-          {error && <span className="text-yellow-500 ml-2">({error})</span>}
-        </p>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Page Title */}
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
+          <p className="text-muted-foreground">
+            Key risk factors and exposure analysis
+            {error && <span className="text-yellow-500 ml-2">({error})</span>}
+          </p>
+        </div>
 
       {/* Top Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -580,6 +627,7 @@ export const ForecastTab = ({ address, validatorIndex }: { address?: string; val
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 
