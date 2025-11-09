@@ -339,11 +339,11 @@ export const PortfolioTab = () => {
             <Lightbulb className="w-5 h-5 text-primary mt-0.5" />
             <div className="flex-1">
               <CardTitle>Beginner Safety Tips</CardTitle>
-              <CardDescription className="mt-2 space-y-2">
-                <p>• Keep an emergency buffer in stablecoins for unexpected expenses</p>
-                <p>• Leverage increases returns but also liquidation risk if collateral value drops</p>
-                <p>• Diversify across different products to manage risk exposure</p>
-              </CardDescription>
+              <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                <div>• Keep an emergency buffer in stablecoins for unexpected expenses</div>
+                <div>• Leverage increases returns but also liquidation risk if collateral value drops</div>
+                <div>• Diversify across different products to manage risk exposure</div>
+              </div>
             </div>
           </div>
         </CardHeader>
