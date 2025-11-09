@@ -7,6 +7,7 @@ import type {
   RatesResponse,
   MultiAssetForecastResponse,
   CorrelationMatrix,
+  RiskAnalysisResponse,
 } from './types';
 
 export async function postJSON<T>(url: string, body: any): Promise<T> {
@@ -62,4 +63,12 @@ export const api = {
 
   health: () =>
     getJSON<{ status: string }>('/health'),
+
+  riskAnalysis: (address?: string, validatorIndex?: string) => {
+    const params = new URLSearchParams();
+    if (address) params.append('address', address);
+    if (validatorIndex) params.append('validator_index', validatorIndex);
+    const queryString = params.toString();
+    return getJSON<RiskAnalysisResponse>(`/api/risk-analysis${queryString ? `?${queryString}` : ''}`);
+  },
 };

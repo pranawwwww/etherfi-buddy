@@ -1,315 +1,352 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { useDemoState } from '@/contexts/DemoContext';
-import { getJSON } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
-import { LineChart, TrendingUp, Shield } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import type { RiskAnalysisResponse } from "@/lib/types";
 
-interface DataPoint {
-  month: number;
-  value: number;
+interface RiskData {
+  address?: string;
+  timestamp?: string;
+  methodology_version?: string;
+  risk_score: {
+    score: number;
+    grade: "Safe" | "Moderate" | "High";
+    top_reasons: string[];
+  };
+  tiles: {
+    operator_uptime: {
+      uptime_7d_pct: number;
+      missed_attestations_7d: number;
+      dvt_protected: boolean;
+      client_diversity_note: string;
+    };
+    avs_concentration: {
+      largest_avs_pct: number;
+      hhi: number;
+      avs_split: Array<{ name: string; pct: number }>;
+    };
+    slashing_proxy: {
+      proxy_score: number;
+      inputs: {
+        operator_uptime_band: string;
+        historical_slashes_count: number;
+        avs_audit_status: string;
+        client_diversity_band: string;
+        dvt_presence: boolean;
+      };
+    };
+    liquidity_depth: {
+      health_index: number;
+      reference_trade_usd: number;
+      chains: Array<{
+        chain: string;
+        venue: string;
+        pool: string;
+        depth_usd: number;
+        slippage_bps: number;
+        est_total_fee_usd: number;
+      }>;
+      recommended_chain?: string;
+    };
+  };
+  breakdown?: {
+    distribution: {
+      base_stake_pct: number;
+      restaked_pct: number;
+      balanced_score: number;
+    };
+  };
 }
 
-interface ForecastResponse {
-  historical: DataPoint[];
-  projection: DataPoint[];
-}
+// Mock data for development
+const mockData: RiskData = {
+  risk_score: {
+    score: 32,
+    grade: "Safe",
+    top_reasons: [
+      "Low slashing probability",
+      "Good AVS concentration",
+      "High operator uptime"
+    ]
+  },
+  tiles: {
+    operator_uptime: {
+      uptime_7d_pct: 99.3,
+      missed_attestations_7d: 12,
+      dvt_protected: true,
+      client_diversity_note: "Prysm(70%), Lighthouse(30%)"
+    },
+    avs_concentration: {
+      largest_avs_pct: 75,
+      hhi: 0.29,
+      avs_split: []
+    },
+    slashing_proxy: {
+      proxy_score: 18,
+      inputs: {
+        operator_uptime_band: "Green",
+        historical_slashes_count: 0,
+        avs_audit_status: "Audited",
+        client_diversity_band: "Amber",
+        dvt_presence: true
+      }
+    },
+    liquidity_depth: {
+      health_index: 60,
+      reference_trade_usd: 10000,
+      chains: []
+    }
+  },
+  breakdown: {
+    distribution: {
+      base_stake_pct: 38,
+      restaked_pct: 62,
+      balanced_score: 66
+    }
+  }
+};
 
-export const ForecastTab = () => {
-  const { demoState } = useDemoState();
-  const { balances, assumptions } = demoState;
-  const { toast } = useToast();
+const RiskScoreGauge = ({ score, grade }: { score: number; grade: string }) => {
+  // Calculate rotation angle based on score (0-100 maps to -90 to 90 degrees)
+  const rotation = -90 + (score / 100) * 180;
 
-  const [principal, setPrincipal] = useState(balances.weETH);
-  const [apy, setApy] = useState(assumptions.apyStake);
-  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    setPrincipal(balances.weETH);
-  }, [balances.weETH]);
-
-  const fetchForecast = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getJSON<ForecastResponse>(
-        `/api/forecast?principal=${principal}&apy=${apy}&months=12`
-      );
-      setForecast(data);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load forecast data. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  // Color based on grade
+  const getGradeColor = (grade: string) => {
+    switch (grade.toLowerCase()) {
+      case "safe":
+        return "#22c55e"; // green
+      case "moderate":
+        return "#3b82f6"; // blue
+      case "high":
+        return "#ef4444"; // red
+      default:
+        return "#3b82f6";
     }
   };
 
-  useEffect(() => {
-    fetchForecast();
-  }, []);
-
-  const maxValue = forecast
-    ? Math.max(
-        ...forecast.historical.map((d) => d.value),
-        ...forecast.projection.map((d) => d.value)
-      )
-    : 1;
-
-  // Health panel logic
-  const getHealthDetails = () => {
-    const diversification = balances.LiquidUSD / (balances.weETH * 3000 + balances.LiquidUSD);
-    const leverageExposure = balances.LiquidUSD > (balances.weETH * 3000 * 0.3) ? 'Medium' : balances.LiquidUSD > 0 ? 'Low' : 'None';
-    
-    const diversificationLabel = 
-      diversification > 0.3 && diversification < 0.7 ? 'Balanced' : 
-      diversification < 0.2 || diversification > 0.8 ? 'Concentrated' : 'Moderate';
-
-    return {
-      diversification: diversificationLabel,
-      leverage: leverageExposure,
-      contracts: 'EtherFi, Liquid vaults'
-    };
-  };
-
-  const health = getHealthDetails();
+  const color = getGradeColor(grade);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Growth Forecast</h2>
-        <p className="text-muted-foreground">
-          12-month projection and portfolio health analysis
-        </p>
+    <div className="flex flex-col items-center justify-center h-full py-8">
+      <div className="relative w-64 h-32">
+        {/* Background arc */}
+        <svg className="w-full h-full" viewBox="0 0 200 100">
+          {/* Gradient arc from orange to green */}
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: "#f97316", stopOpacity: 1 }} />
+              <stop offset="50%" style={{ stopColor: "#eab308", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "#22c55e", stopOpacity: 1 }} />
+            </linearGradient>
+          </defs>
+          {/* Background arc */}
+          <path
+            d="M 20 90 A 80 80 0 0 1 180 90"
+            fill="none"
+            stroke="url(#gaugeGradient)"
+            strokeWidth="16"
+            strokeLinecap="round"
+          />
+          {/* Needle */}
+          <line
+            x1="100"
+            y1="90"
+            x2="100"
+            y2="30"
+            stroke={color}
+            strokeWidth="3"
+            strokeLinecap="round"
+            transform={`rotate(${rotation} 100 90)`}
+            style={{ transition: "transform 1s ease-out" }}
+          />
+          {/* Center dot */}
+          <circle cx="100" cy="90" r="6" fill={color} />
+        </svg>
+        {/* Score text */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4">
+          <div className="text-6xl font-bold" style={{ color }}>
+            {score}
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">Risk Score</div>
+        </div>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Principal (ETH)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Input
-              type="number"
-              step="0.1"
-              value={principal}
-              onChange={(e) => setPrincipal(parseFloat(e.target.value) || 0)}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Projected APY</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Input
-              type="number"
-              step="0.01"
-              value={apy * 100}
-              onChange={(e) => setApy(parseFloat(e.target.value) / 100 || 0)}
-            />
-          </CardContent>
-        </Card>
+      {/* Labels */}
+      <div className="flex justify-between w-64 px-4 mt-2">
+        <span className="text-xs text-muted-foreground">Low</span>
+        <span className="text-xs text-muted-foreground">High</span>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <LineChart className="w-5 h-5" />
-                12-Month Projection
-              </CardTitle>
-              <CardDescription>Gray = Historical, Blue = Projected</CardDescription>
-            </div>
-            <button
-              onClick={fetchForecast}
-              disabled={isLoading}
-              className="text-sm text-primary hover:underline"
-            >
-              Refresh
-            </button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-                <p className="mt-4 text-muted-foreground">Loading forecast...</p>
-              </div>
-            </div>
-          ) : forecast ? (
-            <div className="space-y-4">
-              {/* Simple SVG chart */}
-              <svg viewBox="0 0 800 300" className="w-full h-64">
-                {/* Grid lines */}
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <line
-                    key={i}
-                    x1="50"
-                    y1={50 + i * 50}
-                    x2="750"
-                    y2={50 + i * 50}
-                    stroke="hsl(var(--border))"
-                    strokeWidth="1"
-                    strokeDasharray="4"
-                  />
-                ))}
-
-                {/* Historical line */}
-                <polyline
-                  points={forecast.historical
-                    .map(
-                      (d) =>
-                        `${50 + (d.month / 24) * 700},${250 - (d.value / maxValue) * 180}`
-                    )
-                    .join(' ')}
-                  fill="none"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth="2"
-                />
-
-                {/* Projection line */}
-                <polyline
-                  points={forecast.projection
-                    .map(
-                      (d) =>
-                        `${50 + ((d.month + 12) / 24) * 700},${250 - (d.value / maxValue) * 180}`
-                    )
-                    .join(' ')}
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="3"
-                />
-
-                {/* Axis labels */}
-                <text x="25" y="55" className="text-xs fill-muted-foreground">
-                  {maxValue.toFixed(2)}
-                </text>
-                <text x="25" y="255" className="text-xs fill-muted-foreground">
-                  0
-                </text>
-              </svg>
-
-              <div className="flex items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-0.5 bg-muted-foreground"></div>
-                  <span className="text-muted-foreground">Historical</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-0.5 bg-primary"></div>
-                  <span className="text-foreground">Projection</span>
-                </div>
-              </div>
-
-              {forecast.projection.length > 0 && (
-                <Card className="bg-success/5 border-success/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <TrendingUp className="w-5 h-5 text-success" />
-                    <div>
-                      <p className="font-medium">
-                        Projected value in 12 months:{' '}
-                        {forecast.projection[forecast.projection.length - 1].value.toFixed(4)} ETH
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Based on {(apy * 100).toFixed(2)}% APY
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              No data available
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Health Panel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            Portfolio Health Panel
-          </CardTitle>
-          <CardDescription>Key risk factors and exposure analysis</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="bg-secondary/30 border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Diversification</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-bold text-primary">{health.diversification}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ETH vs USD vs BTC exposure
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-secondary/30 border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Leverage Exposure</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-bold text-accent">{health.leverage}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Based on borrowed position size
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-secondary/30 border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Contract Exposure</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm font-medium text-foreground">{health.contracts}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Smart contract dependencies
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mt-6 space-y-2">
-            <h4 className="font-semibold text-sm">Health Checklist</h4>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2 text-sm">
-                <span className={health.diversification === 'Balanced' ? 'text-success' : 'text-warning'}>
-                  {health.diversification === 'Balanced' ? '✓' : '⚠'}
-                </span>
-                <span className="text-muted-foreground">
-                  <strong>Diversification:</strong> {health.diversification === 'Balanced' ? 'Well balanced across asset types' : 'Consider more diversification'}
-                </span>
-              </div>
-              <div className="flex items-start gap-2 text-sm">
-                <span className={health.leverage === 'None' || health.leverage === 'Low' ? 'text-success' : 'text-warning'}>
-                  {health.leverage === 'None' || health.leverage === 'Low' ? '✓' : '⚠'}
-                </span>
-                <span className="text-muted-foreground">
-                  <strong>Leverage:</strong> {health.leverage === 'None' ? 'No leverage risk' : health.leverage === 'Low' ? 'Low liquidation risk' : 'Monitor closely for liquidation risk'}
-                </span>
-              </div>
-              <div className="flex items-start gap-2 text-sm">
-                <span className="text-muted-foreground">ℹ</span>
-                <span className="text-muted-foreground">
-                  <strong>Protocol exposure:</strong> Using established EtherFi and Liquid vault contracts
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
+
+const RiskBreakdownItem = ({
+  label,
+  value,
+  level
+}: {
+  label: string;
+  value: string | number;
+  level: "Low" | "High" | "Moderate" | string;
+}) => {
+  const getIndicatorColor = (level: string) => {
+    switch (level.toLowerCase()) {
+      case "low":
+        return "bg-green-500";
+      case "moderate":
+        return "bg-blue-500";
+      case "high":
+        return "bg-red-500";
+      default:
+        return "bg-blue-500";
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${getIndicatorColor(level)}`} />
+        <span className="text-sm">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">{level}</span>
+        <span className="text-sm font-medium">{value}</span>
+      </div>
+    </div>
+  );
+};
+
+export const ForecastTab = ({ address, validatorIndex }: { address?: string; validatorIndex?: string } = {}) => {
+  const [data, setData] = useState<RiskData>(mockData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRiskData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.riskAnalysis(address, validatorIndex);
+        setData(response as unknown as RiskData);
+      } catch (err) {
+        console.error("Error fetching risk analysis:", err);
+        setError("Failed to load risk data. Using mock data.");
+        // Keep using mock data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRiskData();
+  }, [address, validatorIndex]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
+          <p className="text-muted-foreground">Loading risk analysis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Page Title */}
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Portfolio Health Panel</h2>
+        <p className="text-muted-foreground">
+          Key risk factors and exposure analysis
+          {error && <span className="text-yellow-500 ml-2">({error})</span>}
+        </p>
+      </div>
+
+      {/* Top Metrics Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Risk Score with Gauge */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-lg">Risk Score</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RiskScoreGauge score={data.risk_score.score} grade={data.risk_score.grade} />
+          </CardContent>
+        </Card>
+
+        {/* Risk Breakdown */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-lg">Risk Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <RiskBreakdownItem
+              label="Slashing Probability"
+              value={`${(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%`}
+              level={data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
+            />
+            <RiskBreakdownItem
+              label="AVS Concentration"
+              value={`${data.tiles.avs_concentration.largest_avs_pct}%`}
+              level={data.tiles.avs_concentration.largest_avs_pct > 50 ? "High" : "Moderate"}
+            />
+            <RiskBreakdownItem
+              label="Operator Uptime"
+              value={`${data.tiles.operator_uptime.uptime_7d_pct}%`}
+              level={data.tiles.operator_uptime.uptime_7d_pct > 99.5 ? "High" : "Moderate"}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Metrics Grid */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* AVS Concentration */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-sm">AVS Concentration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-primary">{data.tiles.avs_concentration.largest_avs_pct}</div>
+            <p className="text-xs text-muted-foreground mt-1">Largest AVS</p>
+          </CardContent>
+        </Card>
+
+        {/* Slashing Probability */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-sm">Slashing Probability</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-accent">{(data.tiles.slashing_proxy.proxy_score / 10).toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data.tiles.slashing_proxy.proxy_score < 30 ? "Low" : data.tiles.slashing_proxy.proxy_score < 60 ? "Moderate" : "High"}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Liquidity Depth */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-sm">Liquidity Depth</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-primary">{data.tiles.liquidity_depth.health_index}</div>
+            <p className="text-xs text-muted-foreground mt-1">Health Index</p>
+          </CardContent>
+        </Card>
+
+        {/* Restake Distribution */}
+        <Card className="bg-secondary/30 border-border">
+          <CardHeader>
+            <CardTitle className="text-sm">Restake Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-primary">{data.breakdown?.distribution.restaked_pct}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Restaked</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default ForecastTab;

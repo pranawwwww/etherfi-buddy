@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import math, json, os
+import httpx
 from etherfi_service import get_live_rates, get_historical_prices, get_apy_history
 
 APP_ORIGIN = os.getenv("APP_ORIGIN", "http://localhost:8080")
@@ -282,3 +283,304 @@ async def apy_history(days: int = 30):
         return {"days": days, "data": data}
     except Exception as e:
         return {"error": str(e), "data": []}
+
+# ========= Risk Analysis Models =========
+class OperatorUptimeData(BaseModel):
+    uptime_7d_pct: float
+    missed_attestations_7d: int
+    dvt_protected: bool
+    client_diversity_note: str
+
+class AVSConcentrationData(BaseModel):
+    largest_avs_pct: float
+    hhi: float
+    avs_split: List[Dict[str, Any]]
+
+class SlashingProxyInputs(BaseModel):
+    operator_uptime_band: str
+    historical_slashes_count: int
+    avs_audit_status: str
+    client_diversity_band: str
+    dvt_presence: bool
+
+class SlashingProxyData(BaseModel):
+    proxy_score: int
+    inputs: SlashingProxyInputs
+
+class LiquidityChainData(BaseModel):
+    chain: str
+    venue: str
+    pool: str
+    depth_usd: float
+    slippage_bps: int
+    est_total_fee_usd: float
+
+class LiquidityDepthData(BaseModel):
+    health_index: int
+    reference_trade_usd: int
+    chains: List[LiquidityChainData]
+    recommended_chain: Optional[str] = None
+
+class TilesData(BaseModel):
+    operator_uptime: OperatorUptimeData
+    avs_concentration: AVSConcentrationData
+    slashing_proxy: SlashingProxyData
+    liquidity_depth: LiquidityDepthData
+
+class DistributionData(BaseModel):
+    base_stake_pct: float
+    restaked_pct: float
+    balanced_score: int
+
+class BreakdownData(BaseModel):
+    distribution: DistributionData
+
+class RiskScoreData(BaseModel):
+    score: int
+    grade: str
+    top_reasons: List[str]
+
+class RiskAnalysisResponse(BaseModel):
+    address: str
+    timestamp: str
+    methodology_version: str
+    risk_score: RiskScoreData
+    tiles: TilesData
+    breakdown: BreakdownData
+
+# ========= Risk Analysis Helpers =========
+async def fetch_json_safe(client: httpx.AsyncClient, url: str, method: str = "GET", json_data: Optional[Dict] = None) -> Dict[str, Any]:
+    """Safely fetch JSON data with error handling"""
+    try:
+        if method == "POST":
+            r = await client.post(url, json=json_data, timeout=15)
+        else:
+            r = await client.get(url, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return {}
+
+async def get_operator_metrics(client: httpx.AsyncClient, validator_index: Optional[str] = None) -> Dict[str, Any]:
+    """Fetch operator/validator metrics from Rated Network or similar service"""
+    # Placeholder - replace with actual Rated API endpoint
+    rated_api_key = os.getenv("RATED_API_KEY", "")
+    if not rated_api_key or not validator_index:
+        # Return mock data for demo
+        return {
+            "uptime": 99.3,
+            "missed_attestations": 12,
+            "client": "Prysm(70%), Lighthouse(30%)",
+            "dvt_protected": True
+        }
+
+    # Actual API call would go here
+    headers = {"Authorization": f"Bearer {rated_api_key}"} if rated_api_key else {}
+    url = f"https://api.rated.network/v0/eth/validators/{validator_index}"
+    try:
+        r = await client.get(url, headers=headers, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"Error fetching operator metrics: {e}")
+        return {}
+
+async def get_liquidity_metrics(client: httpx.AsyncClient, token_address: Optional[str] = None) -> List[LiquidityChainData]:
+    """Fetch liquidity metrics from various DEXes"""
+    # Placeholder - in production, query Uniswap/Curve/Aerodrome subgraphs
+    # For now, return realistic mock data
+    return [
+        LiquidityChainData(
+            chain="Base",
+            venue="Aerodrome",
+            pool="weETH/WETH",
+            depth_usd=8200000.0,
+            slippage_bps=18,
+            est_total_fee_usd=3.1
+        ),
+        LiquidityChainData(
+            chain="Arbitrum",
+            venue="UniswapV3",
+            pool="weETH/WETH",
+            depth_usd=1100000.0,
+            slippage_bps=74,
+            est_total_fee_usd=7.9
+        ),
+        LiquidityChainData(
+            chain="Ethereum",
+            venue="Curve",
+            pool="weETH/WETH",
+            depth_usd=5500000.0,
+            slippage_bps=25,
+            est_total_fee_usd=4.2
+        )
+    ]
+
+def calculate_risk_score(operator_uptime: float, avs_concentration: float, slashing_score: int, liquidity_health: int) -> tuple[int, str, List[str]]:
+    """Calculate overall risk score and grade"""
+    # Weighted risk calculation
+    uptime_risk = max(0, 100 - operator_uptime) * 2  # Higher weight on uptime issues
+    concentration_risk = min(avs_concentration, 100) * 0.5  # AVS concentration
+    slashing_risk = slashing_score * 0.3
+    liquidity_risk = max(0, 100 - liquidity_health) * 0.3
+
+    # Overall score (0-100, lower is better/safer)
+    score = int(uptime_risk + concentration_risk + slashing_risk + liquidity_risk)
+    score = max(0, min(100, score))  # Clamp between 0-100
+
+    # Determine grade
+    if score < 35:
+        grade = "Safe"
+    elif score < 65:
+        grade = "Moderate"
+    else:
+        grade = "High"
+
+    # Generate top reasons based on metrics
+    reasons = []
+    if avs_concentration > 50:
+        reasons.append(f"High AVS concentration ({avs_concentration:.0f}%)")
+    if liquidity_health < 70:
+        reasons.append(f"Moderate liquidity depth (health index: {liquidity_health})")
+    if operator_uptime < 99.5:
+        reasons.append(f"Operator uptime below optimal ({operator_uptime:.1f}%)")
+    if slashing_score > 30:
+        reasons.append(f"Elevated slashing risk score ({slashing_score})")
+
+    if not reasons:
+        reasons = ["Low overall risk across all metrics", "Strong operator performance", "Well-diversified AVS allocation"]
+
+    return score, grade, reasons[:3]  # Return top 3 reasons
+
+def calculate_liquidity_health_index(liquidity_data: List[LiquidityChainData]) -> int:
+    """Calculate liquidity health index (0-100)"""
+    if not liquidity_data:
+        return 50  # Neutral
+
+    total_depth = sum(chain.depth_usd for chain in liquidity_data)
+    avg_slippage = sum(chain.slippage_bps for chain in liquidity_data) / len(liquidity_data)
+
+    # Health based on depth and slippage
+    depth_score = min(100, (total_depth / 10_000_000) * 100)  # $10M = 100
+    slippage_score = max(0, 100 - avg_slippage)  # Lower slippage = better
+
+    health_index = int((depth_score * 0.6 + slippage_score * 0.4))
+    return max(0, min(100, health_index))
+
+# ========= Risk Analysis Endpoint =========
+@app.get("/api/risk-analysis", response_model=RiskAnalysisResponse)
+async def risk_analysis(address: str = "0xabc...1234", validator_index: Optional[str] = None):
+    """
+    Get comprehensive risk analysis for a portfolio.
+    Returns data in the format expected by ForecastTab.tsx
+    """
+    from datetime import datetime, timezone
+
+    async with httpx.AsyncClient() as client:
+        # Fetch operator metrics
+        operator_stats = await get_operator_metrics(client, validator_index)
+
+        # Fetch liquidity metrics
+        liquidity_chains = await get_liquidity_metrics(client)
+
+    # Build operator uptime data
+    operator_uptime_pct = operator_stats.get("uptime", 99.3)
+    operator_uptime = OperatorUptimeData(
+        uptime_7d_pct=operator_uptime_pct,
+        missed_attestations_7d=operator_stats.get("missed_attestations", 12),
+        dvt_protected=operator_stats.get("dvt_protected", True),
+        client_diversity_note=operator_stats.get("client", "Prysm(70%), Lighthouse(30%)")
+    )
+
+    # Build AVS concentration data
+    # TODO: Replace with actual AVS registry data
+    avs_split = [
+        {"name": "DataAvail", "pct": 46.0},
+        {"name": "Oracles", "pct": 31.0},
+        {"name": "Storage", "pct": 23.0}
+    ]
+    largest_avs_pct = max([avs["pct"] for avs in avs_split]) if avs_split else 0
+    avs_concentration = AVSConcentrationData(
+        largest_avs_pct=largest_avs_pct,
+        hhi=0.29,  # Herfindahl-Hirschman Index
+        avs_split=avs_split
+    )
+
+    # Build slashing proxy data
+    uptime_band = "Green" if operator_uptime_pct > 99.5 else "Amber" if operator_uptime_pct > 99.0 else "Red"
+    slashing_inputs = SlashingProxyInputs(
+        operator_uptime_band=uptime_band,
+        historical_slashes_count=0,
+        avs_audit_status="Mixed",
+        client_diversity_band="Amber",
+        dvt_presence=True
+    )
+
+    # Calculate slashing proxy score (0-100, lower is better)
+    slashing_score = 18  # Base score
+    if operator_uptime_pct < 99.5:
+        slashing_score += 10
+    if operator_uptime_pct < 99.0:
+        slashing_score += 15
+    slashing_score = min(100, slashing_score)
+
+    slashing_proxy = SlashingProxyData(
+        proxy_score=slashing_score,
+        inputs=slashing_inputs
+    )
+
+    # Build liquidity depth data
+    health_index = calculate_liquidity_health_index(liquidity_chains)
+    best_chain = min(liquidity_chains, key=lambda x: x.slippage_bps) if liquidity_chains else None
+
+    liquidity_depth = LiquidityDepthData(
+        health_index=health_index,
+        reference_trade_usd=10000,
+        chains=liquidity_chains,
+        recommended_chain=best_chain.chain if best_chain else None
+    )
+
+    # Calculate overall risk score
+    risk_score_value, grade, top_reasons = calculate_risk_score(
+        operator_uptime_pct,
+        largest_avs_pct,
+        slashing_score,
+        health_index
+    )
+
+    risk_score = RiskScoreData(
+        score=risk_score_value,
+        grade=grade,
+        top_reasons=top_reasons
+    )
+
+    # Build tiles
+    tiles = TilesData(
+        operator_uptime=operator_uptime,
+        avs_concentration=avs_concentration,
+        slashing_proxy=slashing_proxy,
+        liquidity_depth=liquidity_depth
+    )
+
+    # Build breakdown (distribution)
+    # TODO: Calculate from actual wallet data
+    distribution = DistributionData(
+        base_stake_pct=38.0,
+        restaked_pct=62.0,
+        balanced_score=66
+    )
+
+    breakdown = BreakdownData(
+        distribution=distribution
+    )
+
+    # Build final response
+    return RiskAnalysisResponse(
+        address=address,
+        timestamp=datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        methodology_version="efi-risk-v1.2",
+        risk_score=risk_score,
+        tiles=tiles,
+        breakdown=breakdown
+    )
