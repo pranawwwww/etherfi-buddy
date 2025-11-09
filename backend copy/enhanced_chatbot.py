@@ -75,25 +75,14 @@ Your role:
 - Include relevant risks and considerations
 - Use real market data when available
 - Be concise but thorough
-- Always include "*Educational only — not financial advice.*" at the end (in italics)
-
-FORMATTING RULES (use Markdown):
-- Use **bold** for important numbers, key terms, and emphasis
-- Use bullet points (- or •) for lists
-- Use proper headings (# or ##) only when needed
-- Keep paragraphs short and scannable
-- Use line breaks to separate ideas
-- Format risks clearly with **Key risks:** prefix
-- Put portfolio values in **bold** (e.g., **$16,200**, **5.0 weETH**)
+- Always include "Educational only — not financial advice" at the end
 
 Guidelines:
-- Personalize responses based on user's portfolio context
-- Start with a friendly greeting if first message
 - Use simple analogies for complex concepts
 - Mention specific numbers from market data when relevant
 - Highlight both opportunities AND risks
-- Suggest actionable next steps
-- Keep answers concise but comprehensive"""
+- Suggest next steps when appropriate
+- Keep answers to 3-5 sentences unless more detail is needed"""
 
         # Build user prompt
         user_prompt = f"""

@@ -4,11 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import math, json, os
 import httpx
-from dotenv import load_dotenv
 from etherfi_service import get_live_rates, get_historical_prices, get_apy_history
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Import new modules
 try:
