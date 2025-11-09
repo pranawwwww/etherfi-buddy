@@ -64,7 +64,7 @@ function AllocationInsights() {
         </div>
       </div>
 
-      <div className="p-6 border rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950">
+      <div className="p-6 border rounded-lg bg-gradient-to-br from-purple-950/40 to-blue-950/40 border-purple-500/20">
         <h3 className="text-lg font-semibold mb-2">Portfolio Health Summary</h3>
         <div className="grid grid-cols-2 gap-4 mt-4">
           <MetricCard label="Diversification" value="65/100" color="text-yellow-600" />

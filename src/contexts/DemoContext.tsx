@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { getUserProfile, type UserProfile } from '@/lib/userProfiles';
 
 interface Balances {
   ETH: number;
@@ -17,27 +18,24 @@ interface Assumptions {
 interface DemoState {
   balances: Balances;
   assumptions: Assumptions;
+  currentUser: UserProfile | null;
 }
 
 interface DemoContextType {
   demoState: DemoState;
   updateBalances: (balances: Partial<Balances>) => void;
   resetToDemo: () => void;
+  switchUser: (userId: string) => void;
+  currentUser: UserProfile | null;
 }
 
+// Default to beginner user
+const beginnerProfile = getUserProfile('beginner');
+
 const defaultDemoState: DemoState = {
-  balances: {
-    ETH: 0.2,
-    eETH: 0.0,
-    weETH: 5.0,
-    LiquidUSD: 1200.0,
-  },
-  assumptions: {
-    apyStake: 0.04,
-    apyLiquidUsd: 0.10,
-    borrowRate: 0.05,
-    ltvWeeth: 0.50,
-  },
+  balances: beginnerProfile.balances,
+  assumptions: beginnerProfile.assumptions,
+  currentUser: beginnerProfile,
 };
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -53,11 +51,37 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetToDemo = () => {
-    setDemoState(defaultDemoState);
+    // Reset to current user's default balances
+    if (demoState.currentUser) {
+      setDemoState({
+        balances: demoState.currentUser.balances,
+        assumptions: demoState.currentUser.assumptions,
+        currentUser: demoState.currentUser,
+      });
+    } else {
+      setDemoState(defaultDemoState);
+    }
+  };
+
+  const switchUser = (userId: string) => {
+    const profile = getUserProfile(userId);
+    setDemoState({
+      balances: profile.balances,
+      assumptions: profile.assumptions,
+      currentUser: profile,
+    });
   };
 
   return (
-    <DemoContext.Provider value={{ demoState, updateBalances, resetToDemo }}>
+    <DemoContext.Provider
+      value={{
+        demoState,
+        updateBalances,
+        resetToDemo,
+        switchUser,
+        currentUser: demoState.currentUser,
+      }}
+    >
       {children}
     </DemoContext.Provider>
   );

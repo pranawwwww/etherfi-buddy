@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
+import { Info } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useDemoState } from '@/contexts/DemoContext';
 import type { MultiAssetForecastResponse } from '@/lib/types';
@@ -106,13 +113,84 @@ export function MultiAssetChart() {
     setSelectedAssets(newSelected);
   };
 
+  // Generate dynamic explanation based on data
+  const generateExplanation = () => {
+    const totalCurrent = data.totalValue[12]?.value || 0;
+    const totalFuture = data.totalValue[data.totalValue.length - 1]?.value || 0;
+    const growthPct = ((totalFuture - totalCurrent) / totalCurrent) * 100;
+    const topAsset = data.assets.reduce((prev, curr) =>
+      curr.currentValue > prev.currentValue ? curr : prev
+    );
+
+    return {
+      title: "Multi-Asset Performance Timeline",
+      description: `This chart shows how your portfolio value evolves over time, combining historical data (past 12 months) and future projections (next 12 months).`,
+      keyPoints: [
+        `📈 Total portfolio expected to grow ${growthPct.toFixed(1)}% over the next year`,
+        `🎯 Current total value: ${formatUSD(totalCurrent)}`,
+        `💎 Largest holding: ${topAsset.asset} at ${formatUSD(topAsset.currentValue)} (${topAsset.apy * 100}% APY)`,
+        `📊 Month 0 (vertical line) represents today - everything to the left is historical, everything to the right is projected`,
+        `🔄 Toggle individual assets on/off using the colored buttons to focus on specific holdings`
+      ],
+      insights: [
+        data.assets.every(a => a.apy > 0)
+          ? "All assets are earning positive yields"
+          : "Some assets are not generating yield",
+        totalCurrent > 0 && growthPct > 5
+          ? "Strong growth trajectory expected"
+          : "Consider optimizing for higher yields"
+      ]
+    };
+  };
+
+  const explanation = data ? generateExplanation() : null;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Multi-Asset Performance Forecast</CardTitle>
-        <CardDescription>
-          Historical (12 months) and projected performance for each asset
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <CardTitle>Multi-Asset Performance Forecast</CardTitle>
+              {explanation && (
+                <HoverCard>
+                  <HoverCardTrigger>
+                    <Info className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-96" side="right">
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">{explanation.title}</h4>
+                        <p className="text-xs text-muted-foreground">{explanation.description}</p>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold mb-2">Key Information:</div>
+                        <ul className="text-xs space-y-1">
+                          {explanation.keyPoints.map((point, idx) => (
+                            <li key={idx} className="text-muted-foreground">{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold mb-2">Insights:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {explanation.insights.map((insight, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {insight}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              )}
+            </div>
+            <CardDescription>
+              Historical (12 months) and projected performance for each asset
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex flex-wrap gap-2">
@@ -138,20 +216,45 @@ export function MultiAssetChart() {
 
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
             <XAxis
               dataKey="month"
-              label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+              label={{ value: 'Months (- is past, + is future)', position: 'insideBottom', offset: -5 }}
+              domain={['dataMin', 'dataMax']}
             />
             <YAxis
               label={{ value: 'Value (USD)', angle: -90, position: 'insideLeft' }}
               tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
             />
+
+            {/* Reference line at month 0 (today) */}
+            <ReferenceLine
+              x={0}
+              stroke="#888"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              label={{ value: 'Today', position: 'top', fill: '#888', fontSize: 12 }}
+            />
+
             <Tooltip
               formatter={(value: number) => formatUSD(value)}
-              labelFormatter={(month) => `Month ${month > 0 ? '+' : ''}${month}`}
+              labelFormatter={(month) => {
+                if (month === 0) return 'Today (Month 0)';
+                return month < 0
+                  ? `${Math.abs(month)} months ago`
+                  : `+${month} months (projected)`;
+              }}
+              contentStyle={{
+                backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid #ccc',
+                borderRadius: '8px',
+                padding: '12px'
+              }}
             />
-            <Legend />
+            <Legend
+              wrapperStyle={{ paddingTop: '20px' }}
+              iconType="line"
+            />
 
             {selectedAssets.has('ETH') && (
               <Line

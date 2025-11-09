@@ -75,7 +75,7 @@ export function OpportunityCostCalculator() {
 
       <CardContent className="space-y-6">
         {/* Efficiency Score */}
-        <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-lg border border-orange-200 dark:border-orange-800">
+        <div className="p-4 bg-gradient-to-r from-orange-950/40 to-red-950/40 rounded-lg border border-orange-500/20">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-orange-600" />
@@ -105,7 +105,7 @@ export function OpportunityCostCalculator() {
             </div>
           </div>
 
-          <div className="text-center p-4 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+          <div className="text-center p-4 border rounded-lg bg-green-950/40 border-green-500/20">
             <div className="text-sm text-muted-foreground mb-1">
               Optimal Strategy ({bestStrategy.name})
             </div>
@@ -121,33 +121,33 @@ export function OpportunityCostCalculator() {
         {/* Missed Earnings */}
         {missedEthPerYear > 0 && (
           <>
-            <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="p-4 bg-secondary border-l-4 border-l-red-500 rounded-lg">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+                <AlertCircle className="h-6 w-6 text-red-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  <h3 className="font-semibold text-foreground mb-2">
                     You're Missing Out
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-red-800 dark:text-red-200">
+                      <div className="text-sm text-muted-foreground">
                         Per Year
                       </div>
-                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">
+                      <div className="text-2xl font-bold text-foreground">
                         {formatETH(missedEthPerYear, 4)}
                       </div>
-                      <div className="text-sm text-red-700 dark:text-red-300">
+                      <div className="text-sm text-muted-foreground">
                         {formatUSD(missedUsdPerYear)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-red-800 dark:text-red-200">
+                      <div className="text-sm text-muted-foreground">
                         APY Points
                       </div>
-                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">
+                      <div className="text-2xl font-bold text-foreground">
                         +{missedApyPoints.toFixed(2)}%
                       </div>
-                      <div className="text-sm text-red-700 dark:text-red-300">
+                      <div className="text-sm text-muted-foreground">
                         Available gain
                       </div>
                     </div>
@@ -193,17 +193,17 @@ export function OpportunityCostCalculator() {
             </div>
 
             {/* Action Recommendation */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            <div className="p-4 bg-blue-950/40 border border-blue-500/20 rounded-lg">
+              <h3 className="font-semibold mb-2">
                 💡 Recommendation
               </h3>
-              <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+              <p className="text-sm text-muted-foreground mb-3">
                 By switching to the <strong>{bestStrategy.name}</strong> strategy,
                 you could earn an additional{' '}
                 <strong>{formatETH(missedEthPerYear, 3)}</strong> (
                 {formatUSD(missedUsdPerYear)}) per year.
               </p>
-              <div className="text-sm text-blue-800 dark:text-blue-200">
+              <div className="text-sm text-muted-foreground">
                 <strong>Next Steps:</strong>
                 <ol className="list-decimal ml-5 mt-1 space-y-1">
                   {bestStrategy.steps.map((step: string, idx: number) => (
@@ -216,12 +216,12 @@ export function OpportunityCostCalculator() {
         )}
 
         {missedEthPerYear <= 0 && (
-          <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg text-center">
+          <div className="p-4 bg-green-950/40 border border-green-500/20 rounded-lg text-center">
             <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+            <h3 className="font-semibold mb-1">
               You're Optimized!
             </h3>
-            <p className="text-sm text-green-800 dark:text-green-200">
+            <p className="text-sm text-muted-foreground">
               Your current strategy is already at or near the optimal APY. Great job!
             </p>
           </div>
