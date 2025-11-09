@@ -6,12 +6,8 @@ import { useDemoState } from '@/contexts/DemoContext';
 import { api } from '@/lib/api';
 import { formatETH, formatUSD, formatPercentage, healthScore, healthBadge } from '@/lib/helpers';
 import type { SimulateResponse } from '@/lib/types';
-<<<<<<< HEAD
 import { TrendingUp, AlertTriangle, Shield, Zap, Fuel } from 'lucide-react';
-=======
-import { TrendingUp, AlertTriangle, Shield, Zap } from 'lucide-react';
 import { Explainable } from '@/components/Explainable';
->>>>>>> 9f0e84d8b37ac9c382ef03c4fd10a8ce4e4ae37f
 
 export function CurrentStrategyCard() {
   const { demoState } = useDemoState();
@@ -300,14 +296,6 @@ export function CurrentStrategyCard() {
         </div>
 
         {/* Summary Metrics */}
-<<<<<<< HEAD
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-secondary rounded-lg">
-            <div className="text-sm text-muted-foreground">Total Value</div>
-            <div className="text-2xl font-bold">{formatUSD(totalUsdValue)}</div>
-            <div className="text-xs text-muted-foreground">
-              {formatETH(totalEthValue, 2)}
-=======
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Explainable 
             term="Total Portfolio Value"
@@ -325,7 +313,6 @@ export function CurrentStrategyCard() {
               <div className="text-xs text-muted-foreground">
                 {formatETH(totalEthValue, 2)}
               </div>
->>>>>>> 9f0e84d8b37ac9c382ef03c4fd10a8ce4e4ae37f
             </div>
           </Explainable>
 
@@ -366,9 +353,6 @@ export function CurrentStrategyCard() {
                 {formatUSD(annualUsdEarnings)}
               </div>
             </div>
-<<<<<<< HEAD
-          </div>
-=======
           </Explainable>
 
           <Explainable 
@@ -393,7 +377,6 @@ export function CurrentStrategyCard() {
               <div className="text-xs text-muted-foreground">{healthStatus}</div>
             </div>
           </Explainable>
->>>>>>> 9f0e84d8b37ac9c382ef03c4fd10a8ce4e4ae37f
         </div>
 
         {/* Position Breakdown */}
@@ -515,6 +498,19 @@ export function CurrentStrategyCard() {
       </CardContent>
     </Card>
   );
+}
+
+function getHealthColor(status: string) {
+  switch (status) {
+    case 'Good':
+      return 'bg-green-500';
+    case 'Caution':
+      return 'bg-yellow-500';
+    case 'Risky':
+      return 'bg-red-500';
+    default:
+      return 'bg-gray-500';
+  }
 }
 
 function getStrategyClassification(balances: any, totalValue: number) {

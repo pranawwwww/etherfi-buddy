@@ -4,11 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { TrendingUp, TrendingDown, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-<<<<<<< HEAD
 import { PriceSparkline } from '@/components/PriceSparkline';
-=======
 import { Explainable } from '@/components/Explainable';
->>>>>>> 9f0e84d8b37ac9c382ef03c4fd10a8ce4e4ae37f
 
 interface PriceData {
   eETH: { price: { price: number; symbol: string; timestamp: number; confidence: number; decimals: number } | number; timestamp: number };
@@ -143,16 +140,7 @@ export function LivePriceDisplay() {
                     {apyData[product.key].source}
                   </Badge>
                 </div>
-<<<<<<< HEAD
-                <div className="text-2xl font-bold mb-1">
-                  ${price.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-                <div className="flex items-center gap-1 text-sm mb-2">
-=======
-                <Explainable 
+                <Explainable
                   term={`${product.name} Price`}
                   type="metric"
                   data={{
@@ -171,7 +159,6 @@ export function LivePriceDisplay() {
                   </div>
                 </Explainable>
                 <div className="flex items-center gap-1 text-sm">
->>>>>>> 9f0e84d8b37ac9c382ef03c4fd10a8ce4e4ae37f
                   {apy > 0 ? (
                     <>
                       <TrendingUp className="h-3 w-3 text-green-500" />
