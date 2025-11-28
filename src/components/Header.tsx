@@ -1,4 +1,4 @@
-import { Coins, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,9 @@ export const Header = ({ onMockConnect }: HeaderProps) => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
-            <Coins className="w-6 h-6 text-primary" />
+            <img src="/cryptocurrencies.png" alt="EtherFi Buddy Logo" className="w-8 h-8" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">eFi Navigator</h1>
+              <h1 className="text-xl font-bold text-foreground">EtherFi Buddy</h1>
               <p className="text-xs text-muted-foreground">Portfolio Management</p>
             </div>
           </div>

@@ -32,7 +32,7 @@ except ImportError as e:
 APP_ORIGIN = os.getenv("APP_ORIGIN", "http://localhost:8080")
 
 app = FastAPI(
-    title="eFi Navigator API",
+    title="EtherFi Buddy API",
     description="Enhanced API with live data, historical tracking, and AI forecasting",
     version="2.0.0"
 )
