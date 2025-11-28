@@ -18,8 +18,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application code
 COPY backend/ .
 
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Expose port (Railway will set PORT env var)
 EXPOSE 8000
 
-# Run with gunicorn - Railway sets PORT env var
-CMD ["sh", "-c", "gunicorn main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 60"]
+# Run with startup script
+CMD ["/app/start.sh"]
