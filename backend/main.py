@@ -37,9 +37,22 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Configure CORS to allow both local development and production origins
+allowed_origins = [
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "https://etherfi-buddy.vercel.app",
+]
+
+# Add custom APP_ORIGIN if set
+if APP_ORIGIN and APP_ORIGIN not in allowed_origins:
+    allowed_origins.append(APP_ORIGIN)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[APP_ORIGIN],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://etherfi-buddy-.*\.vercel\.app",  # Allow all Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
