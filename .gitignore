@@ -36,3 +36,12 @@ ENV/
 
 # Environment variables
 .env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Test files
+test_*.py
+nul
