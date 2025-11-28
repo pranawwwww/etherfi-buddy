@@ -10,8 +10,17 @@ import type {
   RiskAnalysisResponse,
 } from './types';
 
+// Get the API base URL from environment variable or use relative path for development
+const getApiUrl = (path: string): string => {
+  const baseUrl = import.meta.env.VITE_API_URL;
+  if (baseUrl && import.meta.env.PROD) {
+    return `${baseUrl}${path}`;
+  }
+  return path; // Use relative path in development (handled by Vite proxy)
+};
+
 export async function postJSON<T>(url: string, body: any): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(getApiUrl(url), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -27,7 +36,7 @@ export async function postJSON<T>(url: string, body: any): Promise<T> {
 }
 
 export async function getJSON<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(getApiUrl(url), {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
